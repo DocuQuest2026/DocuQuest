@@ -1,0 +1,55 @@
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Edit account') }}
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+                <form method="POST" action="{{ route('admin.staff.update', $account) }}" class="max-w-xl space-y-6">
+                    @csrf
+                    @method('PUT')
+
+                    <div>
+                        <x-input-label for="name" :value="__('Name')" />
+                        <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $account->name)" required autofocus autocomplete="off" />
+                        <x-input-error class="mt-2" :messages="$errors->get('name')" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="email" :value="__('Email')" />
+                        <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $account->email)" required autocomplete="off" />
+                        <x-input-error class="mt-2" :messages="$errors->get('email')" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="role" :value="__('Role')" />
+                        <x-select-input id="role" name="role" class="mt-1 block w-full" required>
+                            @foreach ($roles as $role)
+                                <option value="{{ $role->value }}" @selected(old('role', $account->role->value) === $role->value)>{{ $role->label() }}</option>
+                            @endforeach
+                        </x-select-input>
+                        <x-input-error class="mt-2" :messages="$errors->get('role')" />
+                    </div>
+
+                    <div>
+                        <input type="hidden" name="is_active" value="0">
+                        <label for="is_active" class="inline-flex items-center gap-2 text-sm text-gray-700">
+                            <input id="is_active" name="is_active" type="checkbox" value="1" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" @checked(old('is_active', $account->is_active))>
+                            {{ __('Account is active') }}
+                        </label>
+                        <p class="mt-1 text-xs text-gray-500">{{ __('A deactivated user is signed out and cannot log in. Their history is kept.') }}</p>
+                        <x-input-error class="mt-2" :messages="$errors->get('is_active')" />
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <x-primary-button>{{ __('Save') }}</x-primary-button>
+                        <a href="{{ route('admin.staff.index') }}" class="text-sm text-gray-600 underline hover:text-gray-900">{{ __('Cancel') }}</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
