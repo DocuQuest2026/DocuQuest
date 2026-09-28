@@ -28,10 +28,6 @@
                             <a href="{{ route('dashboard') }}" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
                                 {{ __('Dashboard') }}
                             </a>
-                        @else
-                            <a href="{{ route('login') }}" class="text-sm font-medium text-gray-700 hover:text-gray-900">
-                                {{ __('Student log in') }}
-                            </a>
                         @endauth
                     </nav>
                 </div>

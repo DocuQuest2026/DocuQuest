@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
@@ -12,10 +11,7 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
-    Route::get('login', [AuthenticatedSessionController::class, 'create'])
-        ->name('login');
-
-    Route::post('login', [AuthenticatedSessionController::class, 'store']);
+    Route::redirect('login', '/'.config('auth.staff_login_path'))->name('login');
 
     Route::get(config('auth.staff_login_path'), [StaffAuthenticatedSessionController::class, 'create'])
         ->name('staff.login');
@@ -54,6 +50,6 @@ Route::middleware('auth')->group(function () {
 
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
 
-    Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
+    Route::post('logout', [StaffAuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
 });

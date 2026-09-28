@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
-class LoginRequest extends FormRequest
+abstract class LoginRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -39,10 +39,7 @@ class LoginRequest extends FormRequest
      *
      * @return array<int, Role>
      */
-    protected function allowedRoles(): array
-    {
-        return [Role::Student];
-    }
+    abstract protected function allowedRoles(): array;
 
     /**
      * Attempt to authenticate the request's credentials.

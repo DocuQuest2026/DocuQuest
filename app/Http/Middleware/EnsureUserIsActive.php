@@ -22,7 +22,7 @@ class EnsureUserIsActive
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')->withErrors([
+            return redirect()->route('staff.login')->withErrors([
                 'email' => __('Your account has been deactivated. Please contact the registrar\'s office.'),
             ]);
         }

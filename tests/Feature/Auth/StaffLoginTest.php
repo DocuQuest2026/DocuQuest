@@ -6,10 +6,6 @@ test('staff login screen can be rendered at the configured path', function () {
     $this->get(config('auth.staff_login_path'))->assertOk();
 });
 
-test('the student login screen does not link to the staff login', function () {
-    $this->get('/login')->assertDontSee(route('staff.login'));
-});
-
 test('staff and administrators can sign in through the staff login', function (string $state) {
     $user = User::factory()->{$state}()->create();
 
@@ -29,19 +25,29 @@ test('students can not sign in through the staff login', function () {
     $this->assertGuest();
 });
 
-test('staff and administrators can not sign in through the student login', function (string $state) {
-    $user = User::factory()->{$state}()->create();
-
-    $this->post('/login', ['email' => $user->email, 'password' => 'password'])
-        ->assertSessionHasErrors(['email' => trans('auth.failed')]);
-
-    $this->assertGuest();
-})->with(['staff', 'admin']);
-
 test('deactivated staff can not sign in through the staff login', function () {
     $staff = User::factory()->staff()->inactive()->create();
 
     $this->post(config('auth.staff_login_path'), ['email' => $staff->email, 'password' => 'password']);
 
     $this->assertGuest();
+});
+
+test('staff can logout', function () {
+    $staff = User::factory()->staff()->create();
+
+    $response = $this->actingAs($staff)->post('/logout');
+
+    $this->assertGuest();
+    $response->assertRedirect('/');
+});
+
+test('a user deactivated during a session is signed out on the next request', function () {
+    $staff = User::factory()->staff()->inactive()->create();
+
+    $response = $this->actingAs($staff)->get('/dashboard');
+
+    $this->assertGuest();
+    $response->assertRedirect(route('staff.login'));
+    $response->assertSessionHasErrors('email');
 });
