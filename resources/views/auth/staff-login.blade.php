@@ -1,19 +1,19 @@
 <x-guest-layout>
     <div class="mb-8 text-center">
-        <h1 class="text-2xl font-bold text-gray-900">{{ __('Welcome back') }}</h1>
-        <p class="mt-2 text-sm text-gray-600">{{ __('Log in to your DocuQuest account to continue.') }}</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ __('Staff sign in') }}</h1>
+        <p class="mt-2 text-sm text-gray-600">{{ __('Registrar staff and administrators only.') }}</p>
     </div>
 
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
-    <form method="POST" action="{{ route('login') }}" class="space-y-5">
+    <form method="POST" action="{{ route('staff.login') }}" class="space-y-5">
         @csrf
 
         <!-- Email Address -->
         <div>
             <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" placeholder="you@example.com" />
+            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" placeholder="you@docuquest.test" />
             <x-input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
 

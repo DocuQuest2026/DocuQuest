@@ -31,3 +31,14 @@ test('staff may not update any account', function () {
 
     expect($staff->can('update', $target))->toBeFalse();
 });
+
+test('only administrators may reset any account\'s password, including a student\'s', function (Role $role, bool $allowed) {
+    $user = User::factory()->make(['role' => $role]);
+    $target = User::factory()->make(['role' => Role::Student]);
+
+    expect($user->can('resetPassword', $target))->toBe($allowed);
+})->with([
+    'student' => [Role::Student, false],
+    'staff' => [Role::Staff, false],
+    'admin' => [Role::Admin, true],
+]);

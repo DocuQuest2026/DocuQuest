@@ -16,6 +16,12 @@
                         {{ __('Dashboard') }}
                     </x-nav-link>
 
+                    @can('viewAny', \App\Models\RecordRequest::class)
+                        <x-nav-link :href="route('requests.index')" :active="request()->routeIs('requests.*')">
+                            {{ __('Student requests') }}
+                        </x-nav-link>
+                    @endcan
+
                     @can('viewAny', \App\Models\User::class)
                         <x-nav-link :href="route('admin.staff.index')" :active="request()->routeIs('admin.staff.*')">
                             {{ __('Staff accounts') }}
@@ -76,6 +82,12 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+
+            @can('viewAny', \App\Models\RecordRequest::class)
+                <x-responsive-nav-link :href="route('requests.index')" :active="request()->routeIs('requests.*')">
+                    {{ __('Student requests') }}
+                </x-responsive-nav-link>
+            @endcan
 
             @can('viewAny', \App\Models\User::class)
                 <x-responsive-nav-link :href="route('admin.staff.index')" :active="request()->routeIs('admin.staff.*')">

@@ -6,7 +6,13 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            @if (session('status'))
+                <div class="p-4 bg-green-50 text-green-800 text-sm sm:rounded-lg" role="status">
+                    {{ session('status') }}
+                </div>
+            @endif
+
             <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
                 <form method="POST" action="{{ route('admin.staff.update', $account) }}" class="max-w-xl space-y-6">
                     @csrf
@@ -49,6 +55,12 @@
                         <a href="{{ route('admin.staff.index') }}" class="text-sm text-gray-600 underline hover:text-gray-900">{{ __('Cancel') }}</a>
                     </div>
                 </form>
+            </div>
+
+            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+                <div class="max-w-xl">
+                    @include('admin.partials.reset-password-form')
+                </div>
             </div>
         </div>
     </div>

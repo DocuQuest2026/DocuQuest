@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\StudentProfile;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -29,19 +28,5 @@ class DatabaseSeeder extends Seeder
                 'email' => "staff{$number}@docuquest.test",
             ]);
         }
-
-        $student = User::factory()->create([
-            'name' => 'Jake Estera',
-            'email' => 'student@docuquest.test',
-        ]);
-
-        StudentProfile::factory()->for($student)->create([
-            'student_no' => '2022-00001',
-            'first_name' => 'Jake',
-            'middle_name' => null,
-            'last_name' => 'Estera',
-            'course' => 'BS Information Technology',
-            'year_level' => 4,
-        ]);
     }
 }

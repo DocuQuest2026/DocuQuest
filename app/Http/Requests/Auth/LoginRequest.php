@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Enums\Role;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -34,6 +35,16 @@ class LoginRequest extends FormRequest
     }
 
     /**
+     * The roles allowed to sign in through this form.
+     *
+     * @return array<int, Role>
+     */
+    protected function allowedRoles(): array
+    {
+        return [Role::Student];
+    }
+
+    /**
      * Attempt to authenticate the request's credentials.
      *
      * @throws ValidationException
@@ -42,7 +53,11 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        $credentials = [...$this->only('email', 'password'), 'is_active' => true];
+        $credentials = [
+            ...$this->only('email', 'password'),
+            'is_active' => true,
+            'role' => array_column($this->allowedRoles(), 'value'),
+        ];
 
         if (! Auth::attempt($credentials, $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());

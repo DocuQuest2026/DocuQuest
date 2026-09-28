@@ -114,4 +114,17 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Staff Login Path
+    |--------------------------------------------------------------------------
+    |
+    | Registrar staff and administrators sign in at this unlisted path rather
+    | than the student login. It is never linked from the public pages, so
+    | set STAFF_LOGIN_PATH to something only the office knows.
+    |
+    */
+
+    'staff_login_path' => env('STAFF_LOGIN_PATH', 'staff/login'),
+
 ];

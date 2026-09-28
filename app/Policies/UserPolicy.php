@@ -26,4 +26,12 @@ class UserPolicy
     {
         return $user->isAdmin() && $model->isOfficeUser();
     }
+
+    /**
+     * Administrators may set a new password for any account, office or student.
+     */
+    public function resetPassword(User $user, User $model): bool
+    {
+        return $user->isAdmin();
+    }
 }

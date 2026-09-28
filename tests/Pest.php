@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\DocumentType;
+use App\Enums\EnrolmentStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -47,4 +49,28 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Valid input for the public record request form.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function validRecordRequest(array $overrides = []): array
+{
+    return [
+        'student_no' => '2020-00123',
+        'first_name' => 'Maria',
+        'middle_name' => 'Santos',
+        'last_name' => 'Cruz',
+        'course' => 'BS Information Technology',
+        'enrolment_status' => EnrolmentStatus::Alumni->value,
+        'email' => 'maria.cruz@gmail.com',
+        'contact_no' => '09171234567',
+        'document_type' => DocumentType::TranscriptOfRecords->value,
+        'copies' => 2,
+        'purpose' => 'Employment',
+        ...$overrides,
+    ];
 }
