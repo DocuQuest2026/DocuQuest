@@ -16,7 +16,14 @@
                 </div>
             </div>
         @else
-            <div class="mb-8 text-center">
+            <a href="/" class="inline-flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                </svg>
+                {{ __('Back to home') }}
+            </a>
+
+            <div class="mb-8 mt-4 text-center">
                 <h1 class="text-3xl font-bold tracking-tight text-gray-900">{{ __('Request a Student Record') }}</h1>
                 <p class="mt-2 text-sm text-gray-600">{{ __('Fill in your details exactly as they appear in your school records.') }}</p>
             </div>
@@ -134,6 +141,13 @@
                         <x-input-label for="purpose" :value="__('Purpose of request')" />
                         <textarea id="purpose" name="purpose" rows="3" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('purpose') }}</textarea>
                         <x-input-error :messages="$errors->get('purpose')" class="mt-2" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="designated_representative_name" :value="__('Authorized representative (optional)')" />
+                        <x-text-input id="designated_representative_name" class="mt-1 block w-full" type="text" name="designated_representative_name" :value="old('designated_representative_name')" placeholder="{{ __('Name of the person who will claim this on your behalf, if not you') }}" />
+                        <p class="mt-1 text-xs text-gray-500">{{ __('If someone else will pick this up for you, name them here. Registrar staff will check their ID against this name on release.') }}</p>
+                        <x-input-error :messages="$errors->get('designated_representative_name')" class="mt-2" />
                     </div>
                 </fieldset>
 

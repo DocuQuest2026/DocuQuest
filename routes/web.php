@@ -2,9 +2,12 @@
 
 use App\Http\Controllers\Admin\AccountPasswordController;
 use App\Http\Controllers\Admin\StaffAccountController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentVerificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecordRequestCancellationController;
 use App\Http\Controllers\RecordRequestController;
+use App\Http\Controllers\Staff\DocumentReleaseController;
 use App\Http\Controllers\Staff\StudentRequestController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,11 +27,10 @@ Route::post('/request/cancel', [RecordRequestCancellationController::class, 'sen
 Route::middleware('signed')->group(function () {
     Route::get('/request/cancel/{recordRequest}', [RecordRequestCancellationController::class, 'show'])->name('record-requests.cancel.show');
     Route::post('/request/cancel/{recordRequest}', [RecordRequestCancellationController::class, 'store'])->name('record-requests.cancel.store');
+    Route::get('/verify/{documentRelease}', [DocumentVerificationController::class, 'show'])->name('document-verification.show');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -40,6 +42,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('requests', StudentRequestController::class)
         ->only(['index', 'show'])
         ->parameters(['requests' => 'recordRequest']);
+
+    Route::post('/requests/{recordRequest}/approve', [StudentRequestController::class, 'approve'])->name('requests.approve');
+    Route::post('/requests/{recordRequest}/reject', [StudentRequestController::class, 'reject'])->name('requests.reject');
+    Route::post('/requests/{recordRequest}/confirm-cancellation', [StudentRequestController::class, 'confirmCancellation'])->name('requests.confirm-cancellation');
+    Route::post('/requests/{recordRequest}/deny-cancellation', [StudentRequestController::class, 'denyCancellation'])->name('requests.deny-cancellation');
+    Route::get('/requests/{recordRequest}/release', [DocumentReleaseController::class, 'create'])->name('requests.release.create');
+    Route::post('/requests/{recordRequest}/release', [DocumentReleaseController::class, 'store'])->name('requests.release.store');
 });
 
 Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {

@@ -5,6 +5,10 @@ namespace App\Enums;
 enum RequestStatus: string
 {
     case Pending = 'pending';
+    case Approved = 'approved';
+    case Released = 'released';
+    case Rejected = 'rejected';
+    case CancellationRequested = 'cancellation_requested';
     case Cancelled = 'cancelled';
 
     /**
@@ -12,6 +16,9 @@ enum RequestStatus: string
      */
     public function label(): string
     {
-        return ucfirst($this->value);
+        return match ($this) {
+            self::CancellationRequested => 'Cancellation requested',
+            default => ucfirst($this->value),
+        };
     }
 }

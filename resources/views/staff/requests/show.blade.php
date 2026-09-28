@@ -10,7 +10,13 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8 space-y-4">
+            @if (session('status'))
+                <div class="p-4 bg-green-50 text-green-800 text-sm rounded-lg" role="status">
+                    {{ session('status') }}
+                </div>
+            @endif
+
             <div class="bg-white shadow-sm sm:rounded-lg p-6 space-y-8">
                 @php
                     $sections = [
@@ -26,10 +32,19 @@
                             __('Document') => $recordRequest->document_type->label(),
                             __('Copies') => $recordRequest->copies,
                             __('Purpose') => $recordRequest->purpose,
+                            ...($recordRequest->designated_representative_name ? [__('Authorized representative') => $recordRequest->designated_representative_name] : []),
                             __('Status') => $recordRequest->status->label(),
                             __('Submitted') => $recordRequest->created_at->format('M j, Y g:i A'),
+                            ...($recordRequest->cancellation_requested_at ? [__('Cancellation requested') => $recordRequest->cancellation_requested_at->format('M j, Y g:i A')] : []),
                             ...($recordRequest->cancelled_at ? [__('Cancelled') => $recordRequest->cancelled_at->format('M j, Y g:i A')] : []),
                         ],
+                        ...($recordRequest->release ? [
+                            __('Release') => [
+                                __('Representative') => $recordRequest->release->representative_name,
+                                __('Released by') => $recordRequest->release->releasedBy->name,
+                                __('Released at') => $recordRequest->release->released_at->format('M j, Y g:i A'),
+                            ],
+                        ] : []),
                     ];
                 @endphp
 
@@ -46,6 +61,59 @@
                         </dl>
                     </section>
                 @endforeach
+
+                @if ($recordRequest->release)
+                    <p class="text-sm">
+                        <a href="{{ $recordRequest->release->verificationUrl() }}" class="text-indigo-600 underline hover:text-indigo-800">{{ __('View public verification page') }}</a>
+                    </p>
+                @endif
+
+                @if ($errors->any())
+                    <div class="rounded-lg bg-red-50 p-4 text-sm text-red-700">
+                        <ul class="list-disc list-inside">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                <div class="flex flex-wrap items-center gap-3">
+                    @can('approve', $recordRequest)
+                        <form method="POST" action="{{ route('requests.approve', $recordRequest) }}">
+                            @csrf
+                            <x-primary-button>{{ __('Approve') }}</x-primary-button>
+                        </form>
+                    @endcan
+
+                    @can('reject', $recordRequest)
+                        <form method="POST" action="{{ route('requests.reject', $recordRequest) }}" class="flex items-center gap-2" onsubmit="return this.reason.value.trim() !== '';">
+                            @csrf
+                            <input type="text" name="reason" placeholder="{{ __('Reason for rejection') }}" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                            <x-danger-button>{{ __('Reject') }}</x-danger-button>
+                        </form>
+                    @endcan
+
+                    @can('release', $recordRequest)
+                        <a href="{{ route('requests.release.create', $recordRequest) }}" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-indigo-700">
+                            {{ __('Release document') }}
+                        </a>
+                    @endcan
+
+                    @can('confirmCancellation', $recordRequest)
+                        <form method="POST" action="{{ route('requests.confirm-cancellation', $recordRequest) }}" onsubmit="return confirm('{{ __('Confirm this cancellation? This cannot be undone.') }}');">
+                            @csrf
+                            <x-danger-button>{{ __('Confirm cancellation') }}</x-danger-button>
+                        </form>
+                    @endcan
+
+                    @can('denyCancellation', $recordRequest)
+                        <form method="POST" action="{{ route('requests.deny-cancellation', $recordRequest) }}">
+                            @csrf
+                            <x-secondary-button>{{ __('Keep request') }}</x-secondary-button>
+                        </form>
+                    @endcan
+                </div>
             </div>
         </div>
     </div>

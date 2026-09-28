@@ -16,6 +16,12 @@ test('the request form can be rendered without signing in', function () {
     $this->get(route('record-requests.create'))->assertOk()->assertSee('Student number');
 });
 
+test('the request form links back to the landing page', function () {
+    $this->get(route('record-requests.create'))
+        ->assertOk()
+        ->assertSee('Back to home');
+});
+
 test('the request form offers the configured courses to choose from', function () {
     $response = $this->get(route('record-requests.create'))->assertOk();
 
@@ -108,4 +114,17 @@ test('the email is stored in lowercase', function () {
     $this->post(route('record-requests.store'), validRecordRequest(['email' => ' Maria.Cruz@Gmail.com ']));
 
     expect(RecordRequest::firstOrFail()->email)->toBe('maria.cruz@gmail.com');
+});
+
+test('a requester can optionally name an authorized representative', function () {
+    $this->post(route('record-requests.store'), validRecordRequest(['designated_representative_name' => 'Pedro Reyes']));
+
+    expect(RecordRequest::firstOrFail()->designated_representative_name)->toBe('Pedro Reyes');
+});
+
+test('the authorized representative is optional', function () {
+    $this->post(route('record-requests.store'), validRecordRequest())
+        ->assertSessionDoesntHaveErrors('designated_representative_name');
+
+    expect(RecordRequest::firstOrFail()->designated_representative_name)->toBeNull();
 });

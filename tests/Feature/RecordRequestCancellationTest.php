@@ -37,17 +37,18 @@ test('the signed link asks for confirmation without cancelling', function () {
     expect($recordRequest->fresh()->status)->toBe(RequestStatus::Pending);
 });
 
-test('confirming through the signed link cancels the request', function () {
+test('confirming through the signed link requests cancellation without cancelling outright', function () {
     $recordRequest = RecordRequest::factory()->create();
     $url = $recordRequest->cancellationUrl();
 
     $this->post($url)->assertRedirect($url);
 
     $recordRequest->refresh();
-    expect($recordRequest->status)->toBe(RequestStatus::Cancelled)
-        ->and($recordRequest->cancelled_at)->not->toBeNull();
+    expect($recordRequest->status)->toBe(RequestStatus::CancellationRequested)
+        ->and($recordRequest->cancellation_requested_at)->not->toBeNull()
+        ->and($recordRequest->cancelled_at)->toBeNull();
 
-    $this->get($url)->assertOk()->assertSee('Request cancelled');
+    $this->get($url)->assertOk()->assertSee('Cancellation requested');
 });
 
 test('cancel links that are unsigned, tampered with, or expired are rejected', function () {
@@ -61,6 +62,29 @@ test('cancel links that are unsigned, tampered with, or expired are rejected', f
     $this->post($expired)->assertForbidden();
 
     expect($recordRequest->fresh()->status)->toBe(RequestStatus::Pending);
+});
+
+test('a request cannot be cancelled once the cancellation window has passed', function () {
+    $recordRequest = RecordRequest::factory()->create();
+    $url = $recordRequest->cancellationUrl();
+
+    $this->travel(config('school.cancellation_window_days') + 1)->days();
+
+    $this->get($url)->assertOk()->assertSee('Cancellation window has passed');
+    $this->post($url)->assertRedirect($url);
+
+    expect($recordRequest->fresh()->status)->toBe(RequestStatus::Pending);
+});
+
+test('a request can still be cancelled right up to the edge of the window', function () {
+    $recordRequest = RecordRequest::factory()->create();
+    $url = $recordRequest->cancellationUrl();
+
+    $this->travel(config('school.cancellation_window_days') * 24 - 1)->hours();
+
+    $this->post($url)->assertRedirect($url);
+
+    expect($recordRequest->fresh()->status)->toBe(RequestStatus::CancellationRequested);
 });
 
 test('a link can be requested by reference number and email', function () {

@@ -9,6 +9,7 @@ use Database\Factories\RecordRequestFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
@@ -25,6 +26,7 @@ use Illuminate\Support\Str;
     'document_type',
     'copies',
     'purpose',
+    'designated_representative_name',
 ])]
 class RecordRequest extends Model
 {
@@ -44,18 +46,72 @@ class RecordRequest extends Model
             'copies' => 'integer',
             'status' => RequestStatus::class,
             'cancelled_at' => 'datetime',
+            'cancellation_requested_at' => 'datetime',
         ];
     }
 
     /**
-     * Only requests the registrar has not acted on can be withdrawn.
+     * @return HasOne<DocumentRelease, $this>
+     */
+    public function release(): HasOne
+    {
+        return $this->hasOne(DocumentRelease::class);
+    }
+
+    /**
+     * Only requests the registrar has not acted on, and that are still within the
+     * cancellation window, can have cancellation requested.
      */
     public function isCancellable(): bool
     {
-        return $this->status === RequestStatus::Pending;
+        return $this->status === RequestStatus::Pending && $this->isWithinCancellationWindow();
     }
 
-    public function cancel(): void
+    /**
+     * Whether the requester is still within the window to ask for a cancellation.
+     */
+    public function isWithinCancellationWindow(): bool
+    {
+        return $this->created_at
+            ->addDays(config('school.cancellation_window_days'))
+            ->isFuture();
+    }
+
+    /**
+     * A pending request that has aged past the cancellation window and can no longer
+     * be cancelled by the requester.
+     */
+    public function hasMissedCancellationWindow(): bool
+    {
+        return $this->status === RequestStatus::Pending && ! $this->isWithinCancellationWindow();
+    }
+
+    /**
+     * The requester has asked to withdraw the request; staff must confirm it before it
+     * is actually cancelled.
+     */
+    public function requestCancellation(): void
+    {
+        $this->forceFill([
+            'status' => RequestStatus::CancellationRequested,
+            'cancellation_requested_at' => now(),
+        ])->save();
+    }
+
+    /**
+     * Only a request the requester has asked to cancel can be confirmed or denied.
+     */
+    public function isCancellationConfirmable(): bool
+    {
+        return $this->status === RequestStatus::CancellationRequested;
+    }
+
+    public function isCancellationDeniable(): bool
+    {
+        return $this->status === RequestStatus::CancellationRequested;
+    }
+
+    public function confirmCancellation(): void
     {
         $this->forceFill([
             'status' => RequestStatus::Cancelled,
@@ -64,7 +120,60 @@ class RecordRequest extends Model
     }
 
     /**
-     * A signed link, valid for two weeks, that lets the requester cancel this request.
+     * Keep the request active; the requester's cancellation was not confirmed.
+     */
+    public function denyCancellation(): void
+    {
+        $this->forceFill([
+            'status' => RequestStatus::Pending,
+            'cancellation_requested_at' => null,
+        ])->save();
+    }
+
+    /**
+     * Only a pending request can be approved.
+     */
+    public function isApprovable(): bool
+    {
+        return $this->status === RequestStatus::Pending;
+    }
+
+    /**
+     * Only a pending request can be rejected.
+     */
+    public function isRejectable(): bool
+    {
+        return $this->status === RequestStatus::Pending;
+    }
+
+    /**
+     * Only an approved request can be released to a representative.
+     */
+    public function isReleasable(): bool
+    {
+        return $this->status === RequestStatus::Approved;
+    }
+
+    public function approve(): void
+    {
+        $this->forceFill(['status' => RequestStatus::Approved])->save();
+    }
+
+    public function reject(): void
+    {
+        $this->forceFill(['status' => RequestStatus::Rejected])->save();
+    }
+
+    public function markReleased(): void
+    {
+        $this->forceFill(['status' => RequestStatus::Released])->save();
+    }
+
+    /**
+     * A signed link, valid for two weeks, that lets the requester open the cancellation
+     * page. The link itself outlives the shorter cancellation window (see
+     * isWithinCancellationWindow()) so that a request made past the window shows a clear
+     * "window has passed" message instead of a bare invalid-link error.
      */
     public function cancellationUrl(): string
     {

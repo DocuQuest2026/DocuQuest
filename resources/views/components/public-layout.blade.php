@@ -22,14 +22,6 @@
                         <x-application-logo class="h-8 w-8 fill-current text-indigo-600" />
                         <span class="text-lg font-semibold text-gray-900">{{ config('app.name', 'DocuQuest') }}</span>
                     </a>
-
-                    <nav class="flex items-center gap-3">
-                        @auth
-                            <a href="{{ route('dashboard') }}" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
-                                {{ __('Dashboard') }}
-                            </a>
-                        @endauth
-                    </nav>
                 </div>
             </header>
 

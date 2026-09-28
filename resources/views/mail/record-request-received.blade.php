@@ -15,13 +15,13 @@ Keep this number. You will need it to follow up on your request.
 **Copies:** {{ $recordRequest->copies }}<br>
 **Fee per copy:** {{ $recordRequest->document_type->formattedFee() }}
 
-Made a mistake or no longer need this? You can cancel the request while it is still pending.
+Made a mistake or no longer need this? You can request cancellation within {{ config('school.cancellation_window_days') }} days of submitting.
 
 <x-mail::button :url="$cancellationUrl" color="error">
 Cancel this request
 </x-mail::button>
 
-This link works for 14 days. If you did not make this request, you can ignore this email or cancel it with the button above.
+If you did not make this request, you can ignore this email or cancel it with the button above.
 
 Thanks,<br>
 {{ config('app.name') }}

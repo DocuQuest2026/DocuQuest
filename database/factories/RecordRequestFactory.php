@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Enums\DocumentType;
 use App\Enums\EnrolmentStatus;
 use App\Enums\RequestStatus;
+use App\Models\DocumentRelease;
 use App\Models\RecordRequest;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -33,6 +34,7 @@ class RecordRequestFactory extends Factory
             'document_type' => fake()->randomElement(DocumentType::cases()),
             'copies' => 1,
             'purpose' => fake()->sentence(),
+            'status' => RequestStatus::Pending,
         ];
     }
 
@@ -45,5 +47,46 @@ class RecordRequestFactory extends Factory
             'status' => RequestStatus::Cancelled,
             'cancelled_at' => now(),
         ]);
+    }
+
+    /**
+     * Indicate that the requester has asked to cancel, awaiting staff confirmation.
+     */
+    public function cancellationRequested(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => RequestStatus::CancellationRequested,
+            'cancellation_requested_at' => now(),
+        ]);
+    }
+
+    /**
+     * Indicate that the request has been approved and is awaiting release.
+     */
+    public function approved(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => RequestStatus::Approved,
+        ]);
+    }
+
+    /**
+     * Indicate that the request has been rejected.
+     */
+    public function rejected(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => RequestStatus::Rejected,
+        ]);
+    }
+
+    /**
+     * Indicate that the request has been released to a representative.
+     */
+    public function released(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => RequestStatus::Released,
+        ])->has(DocumentRelease::factory(), 'release');
     }
 }

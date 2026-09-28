@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\SendCancellationLinkRequest;
 use App\Mail\RecordRequestReceived;
 use App\Models\RecordRequest;
+use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -12,6 +13,8 @@ use Illuminate\View\View;
 
 class RecordRequestCancellationController extends Controller
 {
+    public function __construct(private AuditLogger $audit) {}
+
     /**
      * Display the form for requesting a new cancellation link.
      */
@@ -49,12 +52,13 @@ class RecordRequestCancellationController extends Controller
     }
 
     /**
-     * Cancel the request.
+     * Request cancellation. Staff must confirm it before the request is actually cancelled.
      */
     public function store(Request $request, RecordRequest $recordRequest): RedirectResponse
     {
         if ($recordRequest->isCancellable()) {
-            $recordRequest->cancel();
+            $recordRequest->requestCancellation();
+            $this->audit->log(null, 'request.cancellation_requested', $recordRequest);
         }
 
         return redirect($request->fullUrl());

@@ -21,6 +21,16 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
+                        @php
+                            $statusColors = [
+                                \App\Enums\RequestStatus::Pending->value => 'bg-yellow-100 text-yellow-800',
+                                \App\Enums\RequestStatus::Approved->value => 'bg-blue-100 text-blue-800',
+                                \App\Enums\RequestStatus::Released->value => 'bg-green-100 text-green-800',
+                                \App\Enums\RequestStatus::Rejected->value => 'bg-red-100 text-red-800',
+                                \App\Enums\RequestStatus::CancellationRequested->value => 'bg-orange-100 text-orange-800',
+                                \App\Enums\RequestStatus::Cancelled->value => 'bg-gray-200 text-gray-700',
+                            ];
+                        @endphp
                         @forelse ($recordRequests as $recordRequest)
                             <tr>
                                 <td class="px-4 py-3 font-medium text-gray-900">{{ $recordRequest->reference_no }}</td>
@@ -32,11 +42,7 @@
                                 <td class="px-4 py-3 text-gray-600">{{ $recordRequest->copies }}</td>
                                 <td class="px-4 py-3 text-gray-600">{{ $recordRequest->created_at->format('M j, Y g:i A') }}</td>
                                 <td class="px-4 py-3">
-                                    @if ($recordRequest->status === \App\Enums\RequestStatus::Cancelled)
-                                        <span class="inline-flex rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700">{{ $recordRequest->status->label() }}</span>
-                                    @else
-                                        <span class="inline-flex rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">{{ $recordRequest->status->label() }}</span>
-                                    @endif
+                                    <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium {{ $statusColors[$recordRequest->status->value] }}">{{ $recordRequest->status->label() }}</span>
                                 </td>
                                 <td class="px-4 py-3 text-right">
                                     <a href="{{ route('requests.show', $recordRequest) }}" class="text-indigo-600 hover:text-indigo-800 underline">{{ __('View') }}</a>

@@ -48,6 +48,7 @@ class StoreRecordRequestRequest extends FormRequest
             'document_type' => ['required', Rule::enum(DocumentType::class)],
             'copies' => ['required', 'integer', 'between:1,10'],
             'purpose' => ['required', 'string', 'max:1000'],
+            'designated_representative_name' => ['nullable', 'string', 'max:255'],
         ];
     }
 }
