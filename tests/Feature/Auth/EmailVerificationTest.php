@@ -44,3 +44,20 @@ test('email is not verified with invalid hash', function () {
 
     expect($user->fresh()->hasVerifiedEmail())->toBeFalse();
 });
+
+test('a verification link for a different account redirects gracefully instead of a bare 403', function () {
+    $target = User::factory()->unverified()->create();
+    $signedInAs = User::factory()->create();
+
+    $verificationUrl = URL::temporarySignedRoute(
+        'verification.verify',
+        now()->addMinutes(60),
+        ['id' => $target->id, 'hash' => sha1($target->email)]
+    );
+
+    $this->actingAs($signedInAs)->get($verificationUrl)
+        ->assertRedirect(route('dashboard'))
+        ->assertSessionHas('status');
+
+    expect($target->fresh()->hasVerifiedEmail())->toBeFalse();
+});

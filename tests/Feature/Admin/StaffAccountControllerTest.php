@@ -5,8 +5,10 @@ use App\Mail\StaffAccountCredentials;
 use App\Models\AuditLog;
 use App\Models\DocumentRelease;
 use App\Models\User;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 
 describe('access', function () {
     test('guests are redirected to the login screen', function () {
@@ -39,6 +41,20 @@ describe('index', function () {
             ->assertSee($staff->name)
             ->assertDontSee($student->name);
     });
+
+    test('an unverified account is flagged so it is not mistaken for a working one', function () {
+        $unverified = User::factory()->staff()->unverified()->create(['name' => 'Fake Staff']);
+        $verified = User::factory()->staff()->create(['name' => 'Real Staff']);
+
+        $response = $this->actingAs(User::factory()->admin()->create())
+            ->get(route('admin.staff.index'))
+            ->assertOk()
+            ->assertSee(__('Unverified'))
+            ->assertSee('Fake Staff')
+            ->assertSee('Real Staff');
+
+        $response->assertSeeInOrder(['Fake Staff', __('Unverified')]);
+    });
 });
 
 describe('store', function () {
@@ -49,7 +65,7 @@ describe('store', function () {
     {
         return [
             'name' => 'Ana Staff',
-            'email' => 'ana@example.com',
+            'email' => 'ana.staff@gmail.com',
             'role' => 'staff',
             'password' => 'a-strong-password',
             'password_confirmation' => 'a-strong-password',
@@ -59,14 +75,15 @@ describe('store', function () {
 
     test('students and staff can not create accounts', function (Role $role) {
         $this->actingAs(User::factory()->create(['role' => $role]))
-            ->post(route('admin.staff.store'), validStaffAccount(['email' => 'x@example.com']))
+            ->post(route('admin.staff.store'), validStaffAccount(['email' => 'xtestuser@gmail.com']))
             ->assertForbidden();
 
-        $this->assertDatabaseMissing('users', ['email' => 'x@example.com']);
+        $this->assertDatabaseMissing('users', ['email' => 'xtestuser@gmail.com']);
     })->with([Role::Student, Role::Staff]);
 
-    test('an administrator creates a verified staff account and emails their sign-in details', function () {
+    test('an administrator creates an unverified staff account and emails their sign-in details', function () {
         Mail::fake();
+        Notification::fake();
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)
@@ -74,11 +91,11 @@ describe('store', function () {
             ->assertRedirect(route('admin.staff.index'))
             ->assertSessionHas('status');
 
-        $account = User::where('email', 'ana@example.com')->firstOrFail();
+        $account = User::where('email', 'ana.staff@gmail.com')->firstOrFail();
 
         expect($account->role)->toBe(Role::Staff)
             ->and($account->is_active)->toBeTrue()
-            ->and($account->hasVerifiedEmail())->toBeTrue()
+            ->and($account->hasVerifiedEmail())->toBeFalse()
             ->and(Hash::check('a-strong-password', $account->password))->toBeTrue();
 
         Mail::assertSent(StaffAccountCredentials::class, function (StaffAccountCredentials $mail) use ($account) {
@@ -88,11 +105,30 @@ describe('store', function () {
                 && str_contains($mail->render(), 'a-strong-password');
         });
 
+        Notification::assertSentTo($account, VerifyEmail::class);
+
         $this->assertDatabaseHas('audit_logs', [
             'actor_id' => $admin->id,
             'action' => 'staff.created',
             'subject_id' => $account->id,
         ]);
+    });
+
+    test('a new staff account can not access staff pages until the email is verified', function () {
+        Mail::fake();
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)->post(route('admin.staff.store'), validStaffAccount());
+
+        $account = User::where('email', 'ana.staff@gmail.com')->firstOrFail();
+
+        $this->actingAs($account)
+            ->get(route('dashboard'))
+            ->assertRedirect(route('verification.notice'));
+
+        $account->markEmailAsVerified();
+
+        $this->actingAs($account)->get(route('dashboard'))->assertOk();
     });
 
     test('the password set during creation can be used to sign in', function () {
@@ -101,13 +137,13 @@ describe('store', function () {
 
         $this->actingAs($admin)->post(route('admin.staff.store'), validStaffAccount());
 
-        $account = User::where('email', 'ana@example.com')->firstOrFail();
+        $account = User::where('email', 'ana.staff@gmail.com')->firstOrFail();
 
         // Log the admin out first: the staff login route is guest-only, and actingAs() would
         // otherwise leave the admin authenticated for the rest of this test.
         $this->post('/logout');
 
-        $this->post(config('auth.staff_login_path'), ['email' => 'ana@example.com', 'password' => 'a-strong-password'])
+        $this->post(config('auth.staff_login_path'), ['email' => 'ana.staff@gmail.com', 'password' => 'a-strong-password'])
             ->assertRedirect(route('dashboard', absolute: false));
         $this->assertAuthenticatedAs($account);
     });
@@ -116,24 +152,24 @@ describe('store', function () {
         Mail::fake();
 
         $this->actingAs(User::factory()->admin()->create())
-            ->post(route('admin.staff.store'), validStaffAccount(['name' => 'Bea Admin', 'email' => 'bea@example.com', 'role' => 'admin']));
+            ->post(route('admin.staff.store'), validStaffAccount(['name' => 'Bea Admin', 'email' => 'bea.admin@gmail.com', 'role' => 'admin']));
 
-        expect(User::where('email', 'bea@example.com')->firstOrFail()->role)->toBe(Role::Admin);
+        expect(User::where('email', 'bea.admin@gmail.com')->firstOrFail()->role)->toBe(Role::Admin);
     });
 
     test('an office account can not be created with the student role', function () {
         $this->actingAs(User::factory()->admin()->create())
-            ->post(route('admin.staff.store'), validStaffAccount(['name' => 'Sam', 'email' => 'sam@example.com', 'role' => 'student']))
+            ->post(route('admin.staff.store'), validStaffAccount(['name' => 'Sam', 'email' => 'sam.student@gmail.com', 'role' => 'student']))
             ->assertSessionHasErrors('role');
 
-        $this->assertDatabaseMissing('users', ['email' => 'sam@example.com']);
+        $this->assertDatabaseMissing('users', ['email' => 'sam.student@gmail.com']);
     });
 
     test('an account can not reuse an existing email address', function () {
-        User::factory()->create(['email' => 'taken@example.com']);
+        User::factory()->create(['email' => 'taken.staff@gmail.com']);
 
         $this->actingAs(User::factory()->admin()->create())
-            ->post(route('admin.staff.store'), validStaffAccount(['name' => 'Dup', 'email' => 'taken@example.com']))
+            ->post(route('admin.staff.store'), validStaffAccount(['name' => 'Dup', 'email' => 'taken.staff@gmail.com']))
             ->assertSessionHasErrors('email');
     });
 
@@ -143,12 +179,20 @@ describe('store', function () {
             ->assertSessionHasErrors(['name', 'email', 'role', 'password']);
     });
 
+    test('the email must be a real gmail address', function () {
+        $this->actingAs(User::factory()->admin()->create())
+            ->post(route('admin.staff.store'), validStaffAccount(['email' => 'ana.staff@yahoo.com']))
+            ->assertSessionHasErrors('email');
+
+        $this->assertDatabaseMissing('users', ['email' => 'ana.staff@yahoo.com']);
+    });
+
     test('the password confirmation must match', function () {
         $this->actingAs(User::factory()->admin()->create())
             ->post(route('admin.staff.store'), validStaffAccount(['password_confirmation' => 'does-not-match']))
             ->assertSessionHasErrors('password');
 
-        $this->assertDatabaseMissing('users', ['email' => 'ana@example.com']);
+        $this->assertDatabaseMissing('users', ['email' => 'ana.staff@gmail.com']);
     });
 });
 

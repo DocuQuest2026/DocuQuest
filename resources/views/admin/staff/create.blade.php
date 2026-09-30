@@ -17,13 +17,14 @@
 
                     <div>
                         <x-input-label for="name" :value="__('Name')" />
-                        <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name')" required autofocus autocomplete="off" />
+                        <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name')" required autofocus autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore="true" data-form-type="other" />
                         <x-input-error class="mt-2" :messages="$errors->get('name')" />
                     </div>
 
                     <div>
                         <x-input-label for="email" :value="__('Email')" />
-                        <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email')" required autocomplete="off" />
+                        <x-text-input id="email" name="email" type="text" class="mt-1 block w-full" :value="old('email')" required autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true" data-form-type="other" />
+                        <p class="mt-1 text-xs text-gray-500">{{ __('Must be a real Gmail address (e.g. juan.delacruz@gmail.com).') }}</p>
                         <x-input-error class="mt-2" :messages="$errors->get('email')" />
                     </div>
 

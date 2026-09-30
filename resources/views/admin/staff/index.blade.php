@@ -60,6 +60,8 @@
                                 <td class="px-4 py-3">
                                     @if ($account->trashed())
                                         <span class="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">{{ __('Deleted') }}</span>
+                                    @elseif (! $account->hasVerifiedEmail())
+                                        <span class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800" title="{{ __('This account can not sign in until the email address is verified. If it never arrives, the email is likely fake or mistyped.') }}">{{ __('Unverified') }}</span>
                                     @elseif ($account->is_active)
                                         <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">{{ __('Active') }}</span>
                                     @else

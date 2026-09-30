@@ -57,7 +57,8 @@ class StaffAccountController extends Controller
 
     /**
      * Create an office account with the password the administrator set. The new user is
-     * emailed their sign-in details.
+     * emailed their sign-in details, but can not use the account until they verify the
+     * address is real by clicking the link in a separate verification email.
      */
     public function store(StoreStaffAccountRequest $request): RedirectResponse
     {
@@ -66,20 +67,20 @@ class StaffAccountController extends Controller
         $account = new User($request->safe()->only(['name', 'email']));
         $account->password = $password;
         $account->role = Role::from($request->validated('role'));
-        $account->email_verified_at = now();
         $account->save();
 
         $this->audit->log($request->user(), 'staff.created', $account, ['role' => $account->role->value]);
 
         try {
             Mail::to($account->email)->send(new StaffAccountCredentials($account, $password));
+            $account->sendEmailVerificationNotification();
         } catch (Throwable $exception) {
             report($exception);
         }
 
         return redirect()
             ->route('admin.staff.index')
-            ->with('status', __(':name was emailed their sign-in details.', ['name' => $account->name]));
+            ->with('status', __(':name was emailed their sign-in details and a link to verify their email.', ['name' => $account->name]));
     }
 
     /**
