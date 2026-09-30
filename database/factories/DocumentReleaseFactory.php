@@ -23,6 +23,7 @@ class DocumentReleaseFactory extends Factory
             'record_request_id' => RecordRequest::factory(),
             'released_by' => User::factory()->staff(),
             'released_at' => now(),
+            'claim_available_at' => now(),
             'representative_name' => fake()->name(),
             'verification_token' => DocumentRelease::generateVerificationToken(),
         ];

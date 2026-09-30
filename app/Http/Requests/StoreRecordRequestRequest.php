@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\DocumentType;
 use App\Enums\EnrolmentStatus;
+use App\Enums\ValidIdType;
 use App\Rules\GmailAddress;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -49,6 +50,7 @@ class StoreRecordRequestRequest extends FormRequest
             'copies' => ['required', 'integer', 'between:1,10'],
             'purpose' => ['required', 'string', 'max:1000'],
             'designated_representative_name' => ['nullable', 'string', 'max:255'],
+            'designated_representative_id_type' => ['nullable', 'required_with:designated_representative_name', Rule::enum(ValidIdType::class)],
         ];
     }
 }

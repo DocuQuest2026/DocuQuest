@@ -8,6 +8,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecordRequestCancellationController;
 use App\Http\Controllers\RecordRequestController;
+use App\Http\Controllers\RecordRequestStatusController;
 use App\Http\Controllers\Staff\DocumentReleaseController;
 use App\Http\Controllers\Staff\StudentRequestController;
 use Illuminate\Support\Facades\Route;
@@ -21,13 +22,17 @@ Route::post('/request', [RecordRequestController::class, 'store'])
     ->middleware('throttle:record-requests')
     ->name('record-requests.store');
 
+Route::get('/request/status', [RecordRequestStatusController::class, 'create'])->name('record-requests.status.create');
+Route::post('/request/status', [RecordRequestStatusController::class, 'store'])
+    ->middleware('throttle:record-request-status')
+    ->name('record-requests.status.store');
+
 Route::get('/request/cancel', [RecordRequestCancellationController::class, 'create'])->name('record-requests.cancel.create');
-Route::post('/request/cancel', [RecordRequestCancellationController::class, 'sendLink'])
+Route::post('/request/cancel', [RecordRequestCancellationController::class, 'store'])
     ->middleware('throttle:record-request-cancellations')
-    ->name('record-requests.cancel.send');
+    ->name('record-requests.cancel.store');
+
 Route::middleware('signed')->group(function () {
-    Route::get('/request/cancel/{recordRequest}', [RecordRequestCancellationController::class, 'show'])->name('record-requests.cancel.show');
-    Route::post('/request/cancel/{recordRequest}', [RecordRequestCancellationController::class, 'store'])->name('record-requests.cancel.store');
     Route::get('/verify/{documentRelease}', [DocumentVerificationController::class, 'show'])->name('document-verification.show');
 });
 
@@ -43,6 +48,10 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    // Registered before the resource below so "cancellations" is never mistaken for a
+    // {recordRequest} reference number by the resource's show route.
+    Route::get('/requests/cancellations', [StudentRequestController::class, 'cancellations'])->name('requests.cancellations');
+
     Route::resource('requests', StudentRequestController::class)
         ->only(['index', 'show', 'destroy'])
         ->parameters(['requests' => 'recordRequest'])
@@ -55,6 +64,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/requests/{recordRequest}/restore', [StudentRequestController::class, 'restore'])->name('requests.restore')->withTrashed();
     Route::get('/requests/{recordRequest}/release', [DocumentReleaseController::class, 'create'])->name('requests.release.create');
     Route::post('/requests/{recordRequest}/release', [DocumentReleaseController::class, 'store'])->name('requests.release.store');
+    Route::post('/requests/{recordRequest}/claim', [DocumentReleaseController::class, 'claim'])->name('requests.claim');
 });
 
 Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {

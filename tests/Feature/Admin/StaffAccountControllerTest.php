@@ -55,6 +55,22 @@ describe('index', function () {
 
         $response->assertSeeInOrder(['Fake Staff', __('Unverified')]);
     });
+
+    test('the list shows online, offline, and deactivated status correctly', function () {
+        $online = User::factory()->staff()->create(['name' => 'Online Staff', 'last_seen_at' => now()]);
+        $offline = User::factory()->staff()->create(['name' => 'Offline Staff', 'last_seen_at' => now()->subHours(2)]);
+        $neverSeen = User::factory()->staff()->create(['name' => 'Never Seen Staff', 'last_seen_at' => null]);
+        $deactivated = User::factory()->staff()->inactive()->create(['name' => 'Deactivated Staff', 'last_seen_at' => now()]);
+
+        $response = $this->actingAs(User::factory()->admin()->create())
+            ->get(route('admin.staff.index'))
+            ->assertOk();
+
+        $response->assertSeeInOrder([$online->name, __('Online')]);
+        $response->assertSeeInOrder([$offline->name, __('Offline')]);
+        $response->assertSeeInOrder([$neverSeen->name, __('Offline')]);
+        $response->assertSeeInOrder([$deactivated->name, __('Deactivated')]);
+    });
 });
 
 describe('store', function () {

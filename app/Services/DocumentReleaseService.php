@@ -35,6 +35,7 @@ class DocumentReleaseService
                 'record_request_id' => $recordRequest->id,
                 'released_by' => $releasedBy->id,
                 'released_at' => now(),
+                'claim_available_at' => $data['claim_available_at'],
                 'representative_name' => $data['representative_name'],
                 'verification_token' => DocumentRelease::generateVerificationToken(),
             ]);
@@ -47,6 +48,7 @@ class DocumentReleaseService
             $this->audit->log($releasedBy, 'request.released', $recordRequest, [
                 'verification_token' => $documentRelease->verification_token,
                 'representative_name' => $documentRelease->representative_name,
+                'claim_available_at' => $documentRelease->claim_available_at->toIso8601String(),
             ]);
 
             return $documentRelease;

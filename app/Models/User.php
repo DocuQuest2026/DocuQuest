@@ -23,6 +23,11 @@ class User extends Authenticatable implements MustVerifyEmail
     use HasFactory, Notifiable, SoftDeletes;
 
     /**
+     * How recently the user must have been seen to be considered online.
+     */
+    private const ONLINE_WITHIN_MINUTES = 5;
+
+    /**
      * Mirrors the database defaults so an unsaved model already has a role.
      *
      * @var array<string, mixed>
@@ -44,6 +49,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'role' => Role::class,
             'is_active' => 'boolean',
+            'last_seen_at' => 'datetime',
             'deleted_at' => 'datetime',
         ];
     }
@@ -69,6 +75,17 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isOfficeUser(): bool
     {
         return $this->isStaff() || $this->isAdmin();
+    }
+
+    /**
+     * Whether the user has been seen recently enough to be considered currently online.
+     * Session-driven presence (e.g. Redis/database sessions) isn't available here, since this
+     * app uses file sessions, so presence is approximated from request activity instead.
+     */
+    public function isOnline(): bool
+    {
+        return $this->last_seen_at !== null
+            && $this->last_seen_at->isAfter(now()->subMinutes(self::ONLINE_WITHIN_MINUTES));
     }
 
     /**

@@ -35,6 +35,15 @@ class RecordRequestPolicy
         return $user->isOfficeUser() && $recordRequest->isReleasable();
     }
 
+    /**
+     * Registrar staff and administrators can record that a released document was actually
+     * picked up.
+     */
+    public function claim(User $user, RecordRequest $recordRequest): bool
+    {
+        return $user->isOfficeUser() && $recordRequest->isClaimable();
+    }
+
     public function confirmCancellation(User $user, RecordRequest $recordRequest): bool
     {
         return $user->isOfficeUser() && $recordRequest->isCancellationConfirmable();

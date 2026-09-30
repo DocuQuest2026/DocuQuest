@@ -39,9 +39,11 @@
                             __('Copies') => $recordRequest->copies,
                             __('Purpose') => $recordRequest->purpose,
                             ...($recordRequest->designated_representative_name ? [__('Authorized representative') => $recordRequest->designated_representative_name] : []),
+                            ...($recordRequest->designated_representative_id_type ? [__('Representative\'s valid ID') => $recordRequest->designated_representative_id_type->label()] : []),
                             __('Status') => $recordRequest->status->label(),
                             __('Submitted') => $recordRequest->created_at->format('M j, Y g:i A'),
                             ...($recordRequest->cancellation_requested_at ? [__('Cancellation requested') => $recordRequest->cancellation_requested_at->format('M j, Y g:i A')] : []),
+                            ...($recordRequest->cancellation_reason ? [__('Cancellation reason') => $recordRequest->cancellation_reason] : []),
                             ...($recordRequest->cancelled_at ? [__('Cancelled') => $recordRequest->cancelled_at->format('M j, Y g:i A')] : []),
                         ],
                         ...($recordRequest->release ? [
@@ -49,6 +51,9 @@
                                 __('Representative') => $recordRequest->release->representative_name,
                                 __('Released by') => $recordRequest->release->releasedBy->name,
                                 __('Released at') => $recordRequest->release->released_at->format('M j, Y g:i A'),
+                                ...($recordRequest->release->claim_available_at ? [__('Available to claim from') => $recordRequest->release->claim_available_at->format('M j, Y g:i A')] : []),
+                                __('Claim status') => $recordRequest->release->isClaimed() ? __('Claimed') : __('Awaiting claim'),
+                                ...($recordRequest->release->claimed_at ? [__('Claimed at') => $recordRequest->release->claimed_at->format('M j, Y g:i A')] : []),
                             ],
                         ] : []),
                     ];
@@ -67,12 +72,6 @@
                         </dl>
                     </section>
                 @endforeach
-
-                @if ($recordRequest->release)
-                    <p class="text-sm">
-                        <a href="{{ $recordRequest->release->verificationUrl() }}" class="text-indigo-600 underline hover:text-indigo-800">{{ __('View public verification page') }}</a>
-                    </p>
-                @endif
 
                 @if ($errors->any())
                     <div class="rounded-lg bg-red-50 p-4 text-sm text-red-700">
@@ -116,6 +115,48 @@
                             <a href="{{ route('requests.release.create', $recordRequest) }}" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-indigo-700">
                                 {{ __('Release document') }}
                             </a>
+                        @endcan
+
+                        @can('claim', $recordRequest)
+                            <x-primary-button
+                                type="button"
+                                x-data=""
+                                x-on:click.prevent="$dispatch('open-modal', 'confirm-claim')"
+                            >{{ __('Mark as claimed') }}</x-primary-button>
+
+                            <x-modal name="confirm-claim" focusable>
+                                <form method="POST" action="{{ route('requests.claim', $recordRequest) }}" class="p-6">
+                                    @csrf
+
+                                    <h2 class="text-lg font-medium text-gray-900">{{ __('Mark as claimed') }}</h2>
+                                    <p class="mt-1 text-sm text-gray-600">
+                                        {{ __('This defaults to right now, but you can set a different date and time if the pickup already happened.') }}
+                                    </p>
+
+                                    <div class="mt-4">
+                                        <x-input-label for="claimed_at" :value="__('Claimed at')" />
+                                        <x-text-input
+                                            id="claimed_at"
+                                            name="claimed_at"
+                                            type="datetime-local"
+                                            class="mt-1 block w-full"
+                                            value="{{ now()->format('Y-m-d\TH:i') }}"
+                                            max="{{ now()->format('Y-m-d\TH:i') }}"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div class="mt-6 flex justify-end">
+                                        <x-secondary-button type="button" x-on:click="$dispatch('close')">
+                                            {{ __('Cancel') }}
+                                        </x-secondary-button>
+
+                                        <x-primary-button class="ms-3">
+                                            {{ __('Confirm claim') }}
+                                        </x-primary-button>
+                                    </div>
+                                </form>
+                            </x-modal>
                         @endcan
 
                         @can('confirmCancellation', $recordRequest)

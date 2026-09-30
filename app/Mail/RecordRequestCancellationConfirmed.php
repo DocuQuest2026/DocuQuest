@@ -8,7 +8,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class RecordRequestReceived extends Mailable
+class RecordRequestCancellationConfirmed extends Mailable
 {
     use SerializesModels;
 
@@ -20,7 +20,7 @@ class RecordRequestReceived extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "Your reference number: {$this->recordRequest->reference_no}",
+            subject: "Request cancelled: {$this->recordRequest->reference_no}",
         );
     }
 
@@ -30,8 +30,7 @@ class RecordRequestReceived extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'mail.record-request-received',
-            with: ['cancelUrl' => route('record-requests.cancel.create', ['reference_no' => $this->recordRequest->reference_no])],
+            markdown: 'mail.record-request-cancellation-confirmed',
         );
     }
 }

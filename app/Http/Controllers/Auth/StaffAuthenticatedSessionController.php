@@ -29,6 +29,8 @@ class StaffAuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        $request->user()->forceFill(['last_seen_at' => now()])->saveQuietly();
+
         $audit->log($request->user(), 'auth.login');
 
         return redirect()->intended(route('dashboard', absolute: false));
@@ -39,6 +41,8 @@ class StaffAuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $request->user()?->forceFill(['last_seen_at' => null])->saveQuietly();
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();

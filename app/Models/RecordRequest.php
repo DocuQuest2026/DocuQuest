@@ -5,13 +5,13 @@ namespace App\Models;
 use App\Enums\DocumentType;
 use App\Enums\EnrolmentStatus;
 use App\Enums\RequestStatus;
+use App\Enums\ValidIdType;
 use Database\Factories\RecordRequestFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 #[Fillable([
@@ -28,6 +28,7 @@ use Illuminate\Support\Str;
     'copies',
     'purpose',
     'designated_representative_name',
+    'designated_representative_id_type',
 ])]
 class RecordRequest extends Model
 {
@@ -44,6 +45,7 @@ class RecordRequest extends Model
         return [
             'enrolment_status' => EnrolmentStatus::class,
             'document_type' => DocumentType::class,
+            'designated_representative_id_type' => ValidIdType::class,
             'copies' => 'integer',
             'status' => RequestStatus::class,
             'cancelled_at' => 'datetime',
@@ -92,11 +94,12 @@ class RecordRequest extends Model
      * The requester has asked to withdraw the request; staff must confirm it before it
      * is actually cancelled.
      */
-    public function requestCancellation(): void
+    public function requestCancellation(string $reason): void
     {
         $this->forceFill([
             'status' => RequestStatus::CancellationRequested,
             'cancellation_requested_at' => now(),
+            'cancellation_reason' => $reason,
         ])->save();
     }
 
@@ -172,14 +175,13 @@ class RecordRequest extends Model
     }
 
     /**
-     * A signed link, valid for two weeks, that lets the requester open the cancellation
-     * page. The link itself outlives the shorter cancellation window (see
-     * isWithinCancellationWindow()) so that a request made past the window shows a clear
-     * "window has passed" message instead of a bare invalid-link error.
+     * Only a released document that has not already been picked up can be marked claimed.
      */
-    public function cancellationUrl(): string
+    public function isClaimable(): bool
     {
-        return URL::temporarySignedRoute('record-requests.cancel.show', now()->addDays(14), $this);
+        return $this->status === RequestStatus::Released
+            && $this->release !== null
+            && ! $this->release->isClaimed();
     }
 
     /**

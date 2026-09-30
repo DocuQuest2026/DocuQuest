@@ -14,6 +14,7 @@ test('staff and administrators can sign in through the staff login', function (s
 
     $this->assertAuthenticatedAs($user);
     $this->assertDatabaseHas('audit_logs', ['actor_id' => $user->id, 'action' => 'auth.login']);
+    expect($user->fresh()->isOnline())->toBeTrue();
 })->with(['staff', 'admin']);
 
 test('students can not sign in through the staff login', function () {
@@ -40,6 +41,29 @@ test('staff can logout', function () {
 
     $this->assertGuest();
     $response->assertRedirect('/');
+});
+
+test('logging out immediately marks the account offline', function () {
+    $staff = User::factory()->staff()->create(['last_seen_at' => now()]);
+
+    $this->actingAs($staff)->post('/logout');
+
+    expect($staff->fresh()->isOnline())->toBeFalse();
+});
+
+test('an authenticated request refreshes last seen, but not on every request', function () {
+    $staff = User::factory()->staff()->create();
+    $this->actingAs($staff)->get(route('dashboard'));
+
+    $firstSeen = $staff->fresh()->last_seen_at;
+    expect($firstSeen)->not->toBeNull();
+
+    $this->actingAs($staff)->get(route('dashboard'));
+    expect($staff->fresh()->last_seen_at)->toEqual($firstSeen);
+
+    $this->travel(2)->minutes();
+    $this->actingAs($staff)->get(route('dashboard'));
+    expect($staff->fresh()->last_seen_at)->not->toEqual($firstSeen);
 });
 
 test('a user deactivated during a session is signed out on the next request', function () {

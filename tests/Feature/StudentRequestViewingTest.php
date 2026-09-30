@@ -65,3 +65,43 @@ test('guests are redirected to log in when viewing student requests', function (
     $this->get(route('requests.index'))->assertRedirect(route('login'));
     $this->get(route('requests.show', $recordRequest))->assertRedirect(route('login'));
 });
+
+test('a released request from before the claim-available-at field existed still renders', function () {
+    $recordRequest = RecordRequest::factory()->released()->create();
+    $recordRequest->release->update(['claim_available_at' => null]);
+
+    $viewer = User::factory()->admin()->create();
+
+    $this->actingAs($viewer)->get(route('requests.show', $recordRequest))
+        ->assertOk()
+        ->assertDontSee('Available to claim from');
+});
+
+test('a request still shows who released it after that staff account is deleted', function () {
+    $releasedBy = User::factory()->staff()->create(['name' => 'Former Staff']);
+    $recordRequest = RecordRequest::factory()->released()->create();
+    $recordRequest->release->update(['released_by' => $releasedBy->id]);
+    $releasedBy->delete();
+
+    $viewer = User::factory()->admin()->create();
+
+    $this->actingAs($viewer)->get(route('requests.show', $recordRequest))
+        ->assertOk()
+        ->assertSee('Former Staff');
+});
+
+test('the nav shows a badge with the count of new pending requests', function () {
+    RecordRequest::factory()->count(3)->create(['status' => RequestStatus::Pending]);
+    RecordRequest::factory()->approved()->create();
+    $staff = User::factory()->staff()->create();
+
+    $this->actingAs($staff)->get(route('dashboard'))
+        ->assertOk()
+        ->assertSeeInOrder(['Student requests', '3']);
+});
+
+test('the nav shows no badge on student requests when nothing is pending', function () {
+    $staff = User::factory()->staff()->create();
+
+    $this->actingAs($staff)->get(route('dashboard'))->assertOk()->assertSee('Student requests');
+});

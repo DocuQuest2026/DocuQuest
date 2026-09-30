@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class SendCancellationLinkRequest extends FormRequest
+class CheckRecordRequestStatusRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -24,7 +24,6 @@ class SendCancellationLinkRequest extends FormRequest
     {
         return [
             'reference_no' => ['required', 'string', 'max:20'],
-            'email' => ['required', 'string', 'email', 'max:255'],
         ];
     }
 }

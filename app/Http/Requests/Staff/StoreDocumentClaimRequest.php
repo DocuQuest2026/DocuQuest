@@ -5,14 +5,14 @@ namespace App\Http\Requests\Staff;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreDocumentReleaseRequest extends FormRequest
+class StoreDocumentClaimRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return $this->user()?->can('release', $this->route('recordRequest')) ?? false;
+        return $this->user()?->can('claim', $this->route('recordRequest')) ?? false;
     }
 
     /**
@@ -23,8 +23,7 @@ class StoreDocumentReleaseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'representative_name' => ['required', 'string', 'max:255'],
-            'claim_available_at' => ['required', 'date'],
+            'claimed_at' => ['required', 'date', 'before_or_equal:now'],
         ];
     }
 }

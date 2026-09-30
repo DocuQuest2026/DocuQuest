@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\SendCancellationLinkRequest;
-use App\Mail\RecordRequestReceived;
+use App\Enums\RequestStatus;
+use App\Http\Requests\RequestRecordCancellationRequest;
+use App\Mail\RecordRequestCancellationSubmitted;
 use App\Models\RecordRequest;
 use App\Models\User;
 use App\Notifications\RecordRequestCancellationRequested;
 use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\View\View;
@@ -20,60 +20,76 @@ class RecordRequestCancellationController extends Controller
     public function __construct(private AuditLogger $audit) {}
 
     /**
-     * Display the form for requesting a new cancellation link.
+     * Display the cancellation form.
      */
     public function create(): View
     {
-        return view('record-requests.cancel-link');
+        return view('record-requests.cancel');
     }
 
     /**
-     * Email the cancellation link to the address on file. The response is identical whether or
-     * not a request matched, so reference numbers and emails cannot be probed.
+     * Submit a cancellation request. Staff must still confirm it before the request is
+     * actually cancelled.
      */
-    public function sendLink(SendCancellationLinkRequest $request): RedirectResponse
+    public function store(RequestRecordCancellationRequest $request): RedirectResponse
     {
         $recordRequest = RecordRequest::query()
             ->where('reference_no', mb_strtoupper(trim($request->validated('reference_no'))))
             ->whereRaw('lower(email) = ?', [mb_strtolower(trim($request->validated('email')))])
             ->first();
 
-        if ($recordRequest?->isCancellable()) {
-            Mail::to($recordRequest->email)->send(new RecordRequestReceived($recordRequest));
+        if (! $recordRequest) {
+            return back()->withInput()->withErrors([
+                'reference_no' => __('No pending request was found for that reference number and email.'),
+            ]);
+        }
+
+        if (! $recordRequest->isCancellable()) {
+            return back()->withInput()->withErrors([
+                'reference_no' => $this->cancellationBlockedMessage($recordRequest),
+            ]);
+        }
+
+        $recordRequest->requestCancellation($request->validated('reason'));
+        $this->audit->log(null, 'request.cancellation_requested', $recordRequest, [
+            'reason' => $request->validated('reason'),
+        ]);
+
+        try {
+            Mail::to($recordRequest->email)->send(new RecordRequestCancellationSubmitted($recordRequest));
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
+        try {
+            Notification::send(
+                User::office()->active()->get(),
+                new RecordRequestCancellationRequested($recordRequest)
+            );
+        } catch (Throwable $exception) {
+            report($exception);
         }
 
         return redirect()
             ->route('record-requests.cancel.create')
-            ->with('status', __('If those details match a pending request, we have emailed a cancellation link to the address on file.'));
+            ->with('status', __('Your cancellation request has been sent to the registrar and is awaiting review. We have emailed you a confirmation.'));
     }
 
     /**
-     * Ask the requester to confirm the cancellation. Opening the link never cancels on its own.
+     * Explain why a matched request cannot be cancelled right now.
      */
-    public function show(RecordRequest $recordRequest): View
+    private function cancellationBlockedMessage(RecordRequest $recordRequest): string
     {
-        return view('record-requests.cancel', ['recordRequest' => $recordRequest]);
-    }
-
-    /**
-     * Request cancellation. Staff must confirm it before the request is actually cancelled.
-     */
-    public function store(Request $request, RecordRequest $recordRequest): RedirectResponse
-    {
-        if ($recordRequest->isCancellable()) {
-            $recordRequest->requestCancellation();
-            $this->audit->log(null, 'request.cancellation_requested', $recordRequest);
-
-            try {
-                Notification::send(
-                    User::office()->active()->get(),
-                    new RecordRequestCancellationRequested($recordRequest)
-                );
-            } catch (Throwable $exception) {
-                report($exception);
-            }
+        if ($recordRequest->hasMissedCancellationWindow()) {
+            return __('The cancellation window for this request has passed. Please contact the registrar directly.');
         }
 
-        return redirect($request->fullUrl());
+        return match ($recordRequest->status) {
+            RequestStatus::CancellationRequested => __('A cancellation is already pending for this request.'),
+            RequestStatus::Cancelled => __('This request has already been cancelled.'),
+            default => __('This request has already been :status and can no longer be cancelled online.', [
+                'status' => mb_strtolower($recordRequest->status->label()),
+            ]),
+        };
     }
 }

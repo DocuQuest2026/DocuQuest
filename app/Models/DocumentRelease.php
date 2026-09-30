@@ -14,6 +14,8 @@ use Illuminate\Support\Str;
     'record_request_id',
     'released_by',
     'released_at',
+    'claim_available_at',
+    'claimed_at',
     'representative_name',
     'verification_token',
     'pdf_path',
@@ -32,7 +34,17 @@ class DocumentRelease extends Model
     {
         return [
             'released_at' => 'datetime',
+            'claim_available_at' => 'datetime',
+            'claimed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Whether the requester or their representative has actually picked up the document.
+     */
+    public function isClaimed(): bool
+    {
+        return $this->claimed_at !== null;
     }
 
     /**
@@ -44,11 +56,15 @@ class DocumentRelease extends Model
     }
 
     /**
+     * The staff member is looked up including soft-deleted accounts: a foreign key stops
+     * this user from ever being permanently deleted while this release references them, so
+     * they always exist, but may have since been (soft) deleted from the staff list.
+     *
      * @return BelongsTo<User, $this>
      */
     public function releasedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'released_by');
+        return $this->belongsTo(User::class, 'released_by')->withTrashed();
     }
 
     /**

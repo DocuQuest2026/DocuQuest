@@ -62,10 +62,18 @@
                                         <span class="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">{{ __('Deleted') }}</span>
                                     @elseif (! $account->hasVerifiedEmail())
                                         <span class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800" title="{{ __('This account can not sign in until the email address is verified. If it never arrives, the email is likely fake or mistyped.') }}">{{ __('Unverified') }}</span>
-                                    @elseif ($account->is_active)
-                                        <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">{{ __('Active') }}</span>
-                                    @else
+                                    @elseif (! $account->is_active)
                                         <span class="inline-flex rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700">{{ __('Deactivated') }}</span>
+                                    @elseif ($account->isOnline())
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                                            {{ __('Online') }}
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                                            {{ __('Offline') }}
+                                        </span>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-right space-x-3 whitespace-nowrap">

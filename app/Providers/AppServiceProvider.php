@@ -66,5 +66,19 @@ class AppServiceProvider extends ServiceProvider
                 )]);
             });
         });
+
+        // Reference numbers are high-entropy and hard to guess, but this still limits how
+        // fast someone could script through attempts.
+        RateLimiter::for('record-request-status', function (Request $request) {
+            return Limit::perMinutes(10, 5)->by('ip:'.$request->ip())->response(function (Request $request, array $headers) {
+                $minutes = max(1, (int) ceil(((int) ($headers['Retry-After'] ?? 60)) / 60));
+
+                return back()->withInput()->withErrors(['throttle' => trans_choice(
+                    'Too many attempts. Please try again in :minutes minute.|Too many attempts. Please try again in :minutes minutes.',
+                    $minutes,
+                    ['minutes' => $minutes],
+                )]);
+            });
+        });
     }
 }

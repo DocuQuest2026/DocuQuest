@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\RequestStatus;
+use App\Enums\ValidIdType;
 use App\Mail\RecordRequestReleased;
 use App\Models\AuditLog;
 use App\Models\RecordRequest;
@@ -15,6 +16,7 @@ function validRelease(array $overrides = []): array
 {
     return [
         'representative_name' => 'Juan Dela Cruz',
+        'claim_available_at' => now()->addDay()->format('Y-m-d\TH:i'),
         ...$overrides,
     ];
 }
@@ -27,6 +29,18 @@ test('the release form shows and pre-fills the designated representative', funct
         ->assertOk()
         ->assertSee('Pedro Reyes')
         ->assertSee('value="Pedro Reyes"', escape: false);
+});
+
+test('the release form reminds staff which ID to check for the representative', function () {
+    $recordRequest = RecordRequest::factory()->approved()->create([
+        'designated_representative_name' => 'Pedro Reyes',
+        'designated_representative_id_type' => 'government_id',
+    ]);
+    $staff = User::factory()->staff()->create();
+
+    $this->actingAs($staff)->get(route('requests.release.create', $recordRequest))
+        ->assertOk()
+        ->assertSee(ValidIdType::GovernmentId->label());
 });
 
 test('staff can release an approved request', function () {
@@ -48,7 +62,8 @@ test('staff can release an approved request', function () {
         ->and($release->representative_name)->toBe('Juan Dela Cruz')
         ->and($release->released_by)->toBe($staff->id)
         ->and($release->verification_token)->not->toBeNull()
-        ->and($release->pdf_path)->not->toBeNull();
+        ->and($release->pdf_path)->not->toBeNull()
+        ->and($release->claim_available_at)->not->toBeNull();
 
     Storage::disk('local')->assertExists($release->pdf_path);
 });
@@ -65,6 +80,32 @@ test('releasing emails the requester that their document is ready to be claimed,
     Mail::assertSent(RecordRequestReleased::class, fn ($mail) => $mail->hasTo('maria@example.com')
         && $mail->hasSubject('Ready to claim: '.$recordRequest->reference_no)
         && str_contains($mail->render(), 'Juan Dela Cruz'));
+});
+
+test('releasing emails the requester the date and time the document is available to claim', function () {
+    Storage::fake('local');
+    Mail::fake();
+
+    $recordRequest = RecordRequest::factory()->approved()->create(['email' => 'maria@example.com']);
+    $staff = User::factory()->staff()->create();
+    $claimAvailableAt = now()->addDays(2)->setTime(14, 0);
+
+    $this->actingAs($staff)->post(route('requests.release.store', $recordRequest), validRelease([
+        'claim_available_at' => $claimAvailableAt->format('Y-m-d\TH:i'),
+    ]));
+
+    Mail::assertSent(RecordRequestReleased::class, fn ($mail) => str_contains($mail->render(), $claimAvailableAt->format('M j, Y g:i A')));
+});
+
+test('the claim available date and time is required', function () {
+    Storage::fake('local');
+
+    $recordRequest = RecordRequest::factory()->approved()->create();
+    $staff = User::factory()->staff()->create();
+
+    $this->actingAs($staff)
+        ->post(route('requests.release.store', $recordRequest), validRelease(['claim_available_at' => '']))
+        ->assertSessionHasErrors('claim_available_at');
 });
 
 test('releasing logs a released audit entry', function () {

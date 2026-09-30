@@ -22,6 +22,10 @@
                         <x-application-logo class="h-8 w-8 fill-current text-indigo-600" />
                         <span class="text-lg font-semibold text-gray-900">{{ config('app.name', 'DocuQuest') }}</span>
                     </a>
+
+                    <a href="{{ route('record-requests.status.create') }}" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        {{ __('Request Status') }}
+                    </a>
                 </div>
             </header>
 

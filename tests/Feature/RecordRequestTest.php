@@ -2,6 +2,7 @@
 
 use App\Enums\DocumentType;
 use App\Enums\RequestStatus;
+use App\Enums\ValidIdType;
 use App\Models\RecordRequest;
 
 test('the landing page links to the request form', function () {
@@ -116,15 +117,38 @@ test('the email is stored in lowercase', function () {
     expect(RecordRequest::firstOrFail()->email)->toBe('maria.cruz@gmail.com');
 });
 
-test('a requester can optionally name an authorized representative', function () {
-    $this->post(route('record-requests.store'), validRecordRequest(['designated_representative_name' => 'Pedro Reyes']));
+test('a requester can optionally name an authorized representative and their valid ID', function () {
+    $this->post(route('record-requests.store'), validRecordRequest([
+        'designated_representative_name' => 'Pedro Reyes',
+        'designated_representative_id_type' => 'school_id',
+    ]));
 
-    expect(RecordRequest::firstOrFail()->designated_representative_name)->toBe('Pedro Reyes');
+    $recordRequest = RecordRequest::firstOrFail();
+    expect($recordRequest->designated_representative_name)->toBe('Pedro Reyes')
+        ->and($recordRequest->designated_representative_id_type)->toBe(ValidIdType::SchoolId);
 });
 
-test('the authorized representative is optional', function () {
+test('the authorized representative and their valid ID are optional', function () {
     $this->post(route('record-requests.store'), validRecordRequest())
-        ->assertSessionDoesntHaveErrors('designated_representative_name');
+        ->assertSessionDoesntHaveErrors(['designated_representative_name', 'designated_representative_id_type']);
 
-    expect(RecordRequest::firstOrFail()->designated_representative_name)->toBeNull();
+    $recordRequest = RecordRequest::firstOrFail();
+    expect($recordRequest->designated_representative_name)->toBeNull()
+        ->and($recordRequest->designated_representative_id_type)->toBeNull();
+});
+
+test('a valid ID type is required once a representative is named', function () {
+    $this->post(route('record-requests.store'), validRecordRequest(['designated_representative_name' => 'Pedro Reyes']))
+        ->assertSessionHasErrors('designated_representative_id_type');
+
+    expect(RecordRequest::count())->toBe(0);
+});
+
+test('the designated representative ID type must be a known value', function () {
+    $this->post(route('record-requests.store'), validRecordRequest([
+        'designated_representative_name' => 'Pedro Reyes',
+        'designated_representative_id_type' => 'passport',
+    ]))->assertSessionHasErrors('designated_representative_id_type');
+
+    expect(RecordRequest::count())->toBe(0);
 });

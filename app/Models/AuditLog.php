@@ -33,11 +33,14 @@ class AuditLog extends Model
     }
 
     /**
+     * Looked up including soft-deleted accounts, so a log entry still shows who did it even
+     * after that account is later deleted.
+     *
      * @return BelongsTo<User, $this>
      */
     public function actor(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'actor_id');
+        return $this->belongsTo(User::class, 'actor_id')->withTrashed();
     }
 
     /**

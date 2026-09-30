@@ -1,5 +1,5 @@
 <x-public-layout>
-    <div class="mx-auto max-w-2xl px-6 py-12 sm:py-16">
+    <div class="mx-auto max-w-3xl px-6 py-12 sm:py-16">
         @if (session('reference_no'))
             <div class="rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-gray-900/5">
                 <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-50 text-green-600">
@@ -143,11 +143,27 @@
                         <x-input-error :messages="$errors->get('purpose')" class="mt-2" />
                     </div>
 
-                    <div>
-                        <x-input-label for="designated_representative_name" :value="__('Authorized representative (optional)')" />
-                        <x-text-input id="designated_representative_name" class="mt-1 block w-full" type="text" name="designated_representative_name" :value="old('designated_representative_name')" placeholder="{{ __('Name of the person who will claim this on your behalf, if not you') }}" />
-                        <p class="mt-1 text-xs text-gray-500">{{ __('If someone else will pick this up for you, name them here. Registrar staff will check their ID against this name on release.') }}</p>
-                        <x-input-error :messages="$errors->get('designated_representative_name')" class="mt-2" />
+                    <div class="border-t border-gray-200 pt-5 space-y-5">
+                        <h3 class="text-base font-semibold text-gray-900">{{ __('Authorized representative') }}</h3>
+
+                        <div>
+                            <x-input-label for="designated_representative_name" :value="__('Name (optional)')" />
+                            <x-text-input id="designated_representative_name" class="mt-1 block w-full" type="text" name="designated_representative_name" :value="old('designated_representative_name')" placeholder="{{ __('Name of the person who will claim this on your behalf, if not you') }}" />
+                            <p class="mt-1 text-xs text-gray-500">{{ __('If someone else will pick this up for you, name them here. Registrar staff will check their ID against this name on release.') }}</p>
+                            <x-input-error :messages="$errors->get('designated_representative_name')" class="mt-2" />
+                        </div>
+
+                        <div>
+                            <x-input-label for="designated_representative_id_type" :value="__('Valid ID your representative will show')" />
+                            <x-select-input id="designated_representative_id_type" name="designated_representative_id_type" class="mt-1 block w-full">
+                                <option value="">{{ __('Select a valid ID type') }}</option>
+                                @foreach (\App\Enums\ValidIdType::cases() as $idType)
+                                    <option value="{{ $idType->value }}" @selected(old('designated_representative_id_type') === $idType->value)>{{ $idType->label() }}</option>
+                                @endforeach
+                            </x-select-input>
+                            <p class="mt-1 text-xs text-gray-500">{{ __('Required if you named a representative above. This is what they must present to the registrar when claiming the document.') }}</p>
+                            <x-input-error :messages="$errors->get('designated_representative_id_type')" class="mt-2" />
+                        </div>
                     </div>
                 </fieldset>
 

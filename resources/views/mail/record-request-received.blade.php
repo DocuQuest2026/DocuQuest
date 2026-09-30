@@ -17,7 +17,7 @@ Keep this number. You will need it to follow up on your request.
 
 Made a mistake or no longer need this? You can request cancellation within {{ config('school.cancellation_window_days') }} days of submitting.
 
-<x-mail::button :url="$cancellationUrl" color="error">
+<x-mail::button :url="$cancelUrl" color="error">
 Cancel this request
 </x-mail::button>
 

@@ -17,8 +17,27 @@
                     </x-nav-link>
 
                     @can('viewAny', \App\Models\RecordRequest::class)
-                        <x-nav-link :href="route('requests.index')" :active="request()->routeIs('requests.*')">
+                        @php
+                            $pendingCancellationsCount = \App\Models\RecordRequest::where('status', \App\Enums\RequestStatus::CancellationRequested)->count();
+                            $pendingRequestsCount = \App\Models\RecordRequest::where('status', \App\Enums\RequestStatus::Pending)->count();
+                        @endphp
+
+                        <x-nav-link :href="route('requests.cancellations')" :active="request()->routeIs('requests.cancellations')">
+                            {{ __('Cancellation requests') }}
+                            @if ($pendingCancellationsCount > 0)
+                                <span class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">
+                                    {{ $pendingCancellationsCount > 9 ? '9+' : $pendingCancellationsCount }}
+                                </span>
+                            @endif
+                        </x-nav-link>
+
+                        <x-nav-link :href="route('requests.index')" :active="request()->routeIs('requests.index') || request()->routeIs('requests.show')">
                             {{ __('Student requests') }}
+                            @if ($pendingRequestsCount > 0)
+                                <span class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">
+                                    {{ $pendingRequestsCount > 9 ? '9+' : $pendingRequestsCount }}
+                                </span>
+                            @endif
                         </x-nav-link>
                     @endcan
 
@@ -134,8 +153,27 @@
             </x-responsive-nav-link>
 
             @can('viewAny', \App\Models\RecordRequest::class)
-                <x-responsive-nav-link :href="route('requests.index')" :active="request()->routeIs('requests.*')">
+                @php
+                    $pendingCancellationsCountMobile = \App\Models\RecordRequest::where('status', \App\Enums\RequestStatus::CancellationRequested)->count();
+                    $pendingRequestsCountMobile = \App\Models\RecordRequest::where('status', \App\Enums\RequestStatus::Pending)->count();
+                @endphp
+
+                <x-responsive-nav-link :href="route('requests.cancellations')" :active="request()->routeIs('requests.cancellations')">
+                    {{ __('Cancellation requests') }}
+                    @if ($pendingCancellationsCountMobile > 0)
+                        <span class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">
+                            {{ $pendingCancellationsCountMobile > 9 ? '9+' : $pendingCancellationsCountMobile }}
+                        </span>
+                    @endif
+                </x-responsive-nav-link>
+
+                <x-responsive-nav-link :href="route('requests.index')" :active="request()->routeIs('requests.index') || request()->routeIs('requests.show')">
                     {{ __('Student requests') }}
+                    @if ($pendingRequestsCountMobile > 0)
+                        <span class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">
+                            {{ $pendingRequestsCountMobile > 9 ? '9+' : $pendingRequestsCountMobile }}
+                        </span>
+                    @endif
                 </x-responsive-nav-link>
             @endcan
 
