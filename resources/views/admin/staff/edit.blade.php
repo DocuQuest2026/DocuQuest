@@ -62,6 +62,50 @@
                     @include('admin.partials.reset-password-form')
                 </div>
             </div>
+
+            @can('delete', $account)
+                <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+                    <div class="max-w-xl space-y-6">
+                        <header>
+                            <h2 class="text-lg font-medium text-gray-900">{{ __('Delete account') }}</h2>
+                            <p class="mt-1 text-sm text-gray-600">
+                                {{ __('This account will be signed out and removed from the staff list. This does not delete their history and can be recovered if needed.') }}
+                            </p>
+                        </header>
+
+                        <x-danger-button
+                            type="button"
+                            x-data=""
+                            x-on:click.prevent="$dispatch('open-modal', 'confirm-staff-deletion')"
+                        >{{ __('Delete account') }}</x-danger-button>
+
+                        <x-modal name="confirm-staff-deletion" focusable>
+                            <form method="POST" action="{{ route('admin.staff.destroy', $account) }}" class="p-6">
+                                @csrf
+                                @method('delete')
+
+                                <h2 class="text-lg font-medium text-gray-900">
+                                    {{ __('Delete this account?') }}
+                                </h2>
+
+                                <p class="mt-1 text-sm text-gray-600">
+                                    {{ __(':name (:email) will be signed out and removed from the list. This does not delete their history and can be recovered if needed.', ['name' => $account->name, 'email' => $account->email]) }}
+                                </p>
+
+                                <div class="mt-6 flex justify-end">
+                                    <x-secondary-button x-on:click="$dispatch('close')">
+                                        {{ __('Cancel') }}
+                                    </x-secondary-button>
+
+                                    <x-danger-button class="ms-3">
+                                        {{ __('Delete account') }}
+                                    </x-danger-button>
+                                </div>
+                            </form>
+                        </x-modal>
+                    </div>
+                </div>
+            @endcan
         </div>
     </div>
 </x-app-layout>

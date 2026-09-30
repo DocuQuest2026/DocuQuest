@@ -65,7 +65,9 @@ class ProfileController extends Controller
 
         Auth::logout();
 
-        $user->delete();
+        // A user deleting their own account is promised permanent deletion (see the profile
+        // view), unlike an admin deleting a staff account, which is recoverable.
+        $user->forceDelete();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

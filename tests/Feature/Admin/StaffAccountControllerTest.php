@@ -1,9 +1,12 @@
 <?php
 
 use App\Enums\Role;
+use App\Mail\StaffAccountCredentials;
+use App\Models\AuditLog;
+use App\Models\DocumentRelease;
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 describe('access', function () {
     test('guests are redirected to the login screen', function () {
@@ -39,20 +42,35 @@ describe('index', function () {
 });
 
 describe('store', function () {
+    /**
+     * @return array<string, mixed>
+     */
+    function validStaffAccount(array $overrides = []): array
+    {
+        return [
+            'name' => 'Ana Staff',
+            'email' => 'ana@example.com',
+            'role' => 'staff',
+            'password' => 'a-strong-password',
+            'password_confirmation' => 'a-strong-password',
+            ...$overrides,
+        ];
+    }
+
     test('students and staff can not create accounts', function (Role $role) {
         $this->actingAs(User::factory()->create(['role' => $role]))
-            ->post(route('admin.staff.store'), ['name' => 'X', 'email' => 'x@example.com', 'role' => 'staff'])
+            ->post(route('admin.staff.store'), validStaffAccount(['email' => 'x@example.com']))
             ->assertForbidden();
 
         $this->assertDatabaseMissing('users', ['email' => 'x@example.com']);
     })->with([Role::Student, Role::Staff]);
 
-    test('an administrator creates a verified staff account and emails a password setup link', function () {
-        Notification::fake();
+    test('an administrator creates a verified staff account and emails their sign-in details', function () {
+        Mail::fake();
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)
-            ->post(route('admin.staff.store'), ['name' => 'Ana Staff', 'email' => 'ana@example.com', 'role' => 'staff'])
+            ->post(route('admin.staff.store'), validStaffAccount())
             ->assertRedirect(route('admin.staff.index'))
             ->assertSessionHas('status');
 
@@ -60,9 +78,15 @@ describe('store', function () {
 
         expect($account->role)->toBe(Role::Staff)
             ->and($account->is_active)->toBeTrue()
-            ->and($account->hasVerifiedEmail())->toBeTrue();
+            ->and($account->hasVerifiedEmail())->toBeTrue()
+            ->and(Hash::check('a-strong-password', $account->password))->toBeTrue();
 
-        Notification::assertSentTo($account, ResetPassword::class);
+        Mail::assertSent(StaffAccountCredentials::class, function (StaffAccountCredentials $mail) use ($account) {
+            return $mail->hasTo($account->email)
+                && $mail->account->is($account)
+                && $mail->password === 'a-strong-password'
+                && str_contains($mail->render(), 'a-strong-password');
+        });
 
         $this->assertDatabaseHas('audit_logs', [
             'actor_id' => $admin->id,
@@ -71,18 +95,35 @@ describe('store', function () {
         ]);
     });
 
+    test('the password set during creation can be used to sign in', function () {
+        Mail::fake();
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)->post(route('admin.staff.store'), validStaffAccount());
+
+        $account = User::where('email', 'ana@example.com')->firstOrFail();
+
+        // Log the admin out first: the staff login route is guest-only, and actingAs() would
+        // otherwise leave the admin authenticated for the rest of this test.
+        $this->post('/logout');
+
+        $this->post(config('auth.staff_login_path'), ['email' => 'ana@example.com', 'password' => 'a-strong-password'])
+            ->assertRedirect(route('dashboard', absolute: false));
+        $this->assertAuthenticatedAs($account);
+    });
+
     test('an administrator can create another administrator', function () {
-        Notification::fake();
+        Mail::fake();
 
         $this->actingAs(User::factory()->admin()->create())
-            ->post(route('admin.staff.store'), ['name' => 'Bea Admin', 'email' => 'bea@example.com', 'role' => 'admin']);
+            ->post(route('admin.staff.store'), validStaffAccount(['name' => 'Bea Admin', 'email' => 'bea@example.com', 'role' => 'admin']));
 
         expect(User::where('email', 'bea@example.com')->firstOrFail()->role)->toBe(Role::Admin);
     });
 
     test('an office account can not be created with the student role', function () {
         $this->actingAs(User::factory()->admin()->create())
-            ->post(route('admin.staff.store'), ['name' => 'Sam', 'email' => 'sam@example.com', 'role' => 'student'])
+            ->post(route('admin.staff.store'), validStaffAccount(['name' => 'Sam', 'email' => 'sam@example.com', 'role' => 'student']))
             ->assertSessionHasErrors('role');
 
         $this->assertDatabaseMissing('users', ['email' => 'sam@example.com']);
@@ -92,14 +133,22 @@ describe('store', function () {
         User::factory()->create(['email' => 'taken@example.com']);
 
         $this->actingAs(User::factory()->admin()->create())
-            ->post(route('admin.staff.store'), ['name' => 'Dup', 'email' => 'taken@example.com', 'role' => 'staff'])
+            ->post(route('admin.staff.store'), validStaffAccount(['name' => 'Dup', 'email' => 'taken@example.com']))
             ->assertSessionHasErrors('email');
     });
 
-    test('name, email and role are required', function () {
+    test('name, email, role and password are required', function () {
         $this->actingAs(User::factory()->admin()->create())
             ->post(route('admin.staff.store'), [])
-            ->assertSessionHasErrors(['name', 'email', 'role']);
+            ->assertSessionHasErrors(['name', 'email', 'role', 'password']);
+    });
+
+    test('the password confirmation must match', function () {
+        $this->actingAs(User::factory()->admin()->create())
+            ->post(route('admin.staff.store'), validStaffAccount(['password_confirmation' => 'does-not-match']))
+            ->assertSessionHasErrors('password');
+
+        $this->assertDatabaseMissing('users', ['email' => 'ana@example.com']);
     });
 });
 
@@ -194,5 +243,220 @@ describe('update', function () {
             ->assertSessionHasNoErrors();
 
         expect($admin->fresh()->name)->toBe('New Name');
+    });
+});
+
+describe('destroy', function () {
+    test('the edit page shows a delete button for another office account', function () {
+        $account = User::factory()->staff()->create();
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('admin.staff.edit', $account))
+            ->assertOk()
+            ->assertSee(__('Delete account'));
+    });
+
+    test('the edit page does not show a delete button for your own account', function () {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->get(route('admin.staff.edit', $admin))
+            ->assertOk()
+            ->assertDontSee(__('Delete account'));
+    });
+
+    test('an administrator deletes another office account', function () {
+        $admin = User::factory()->admin()->create();
+        $account = User::factory()->staff()->create();
+
+        $this->actingAs($admin)
+            ->delete(route('admin.staff.destroy', $account))
+            ->assertRedirect(route('admin.staff.index'));
+
+        expect(User::find($account->id))->toBeNull()
+            ->and(User::withTrashed()->find($account->id))->not->toBeNull();
+
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_id' => $admin->id,
+            'action' => 'staff.deleted',
+            'subject_id' => $account->id,
+        ]);
+    });
+
+    test('a deleted account no longer appears in the list', function () {
+        $admin = User::factory()->admin()->create();
+        $account = User::factory()->staff()->create();
+
+        $this->actingAs($admin)->delete(route('admin.staff.destroy', $account));
+
+        $this->actingAs($admin)->get(route('admin.staff.index'))->assertDontSee($account->email);
+    });
+
+    test('a deleted account can not sign in', function () {
+        $account = User::factory()->staff()->create(['email' => 'deleted.staff@docuquest.test']);
+        $account->delete();
+
+        $this->post(config('auth.staff_login_path'), ['email' => 'deleted.staff@docuquest.test', 'password' => 'password'])
+            ->assertSessionHasErrors(['email' => trans('auth.failed')]);
+        $this->assertGuest();
+    });
+
+    test('an administrator can not delete their own account', function () {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)->delete(route('admin.staff.destroy', $admin))->assertForbidden();
+
+        expect(User::find($admin->id))->not->toBeNull();
+    });
+
+    test('staff can not delete accounts', function () {
+        $target = User::factory()->staff()->create();
+
+        $this->actingAs(User::factory()->staff()->create())
+            ->delete(route('admin.staff.destroy', $target))
+            ->assertForbidden();
+
+        expect(User::find($target->id))->not->toBeNull();
+    });
+
+    test('a student account can not be deleted through the staff screens', function () {
+        $student = User::factory()->create();
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->delete(route('admin.staff.destroy', $student))
+            ->assertForbidden();
+    });
+
+    test('guests are redirected to log in when deleting an account', function () {
+        $account = User::factory()->staff()->create();
+
+        $this->delete(route('admin.staff.destroy', $account))->assertRedirect(route('login'));
+    });
+});
+
+describe('restore', function () {
+    test('an administrator restores a deleted account', function () {
+        $admin = User::factory()->admin()->create();
+        $account = User::factory()->staff()->create();
+        $account->delete();
+
+        $this->actingAs($admin)
+            ->post(route('admin.staff.restore', $account))
+            ->assertRedirect(route('admin.staff.index'));
+
+        expect(User::find($account->id))->not->toBeNull();
+
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_id' => $admin->id,
+            'action' => 'staff.restored',
+            'subject_id' => $account->id,
+        ]);
+    });
+
+    test('the deleted accounts view shows only deleted accounts', function () {
+        $deleted = User::factory()->staff()->create(['name' => 'Deleted Staff']);
+        $deleted->delete();
+        $active = User::factory()->staff()->create(['name' => 'Active Staff']);
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('admin.staff.index', ['deleted' => 1]))
+            ->assertOk()
+            ->assertSee('Deleted Staff')
+            ->assertDontSee('Active Staff');
+    });
+
+    test('an active account can not be restored', function () {
+        $admin = User::factory()->admin()->create();
+        $account = User::factory()->staff()->create();
+
+        $this->actingAs($admin)->post(route('admin.staff.restore', $account))->assertForbidden();
+    });
+
+    test('staff can not restore accounts', function () {
+        $account = User::factory()->staff()->create();
+        $account->delete();
+
+        $this->actingAs(User::factory()->staff()->create())
+            ->post(route('admin.staff.restore', $account))
+            ->assertForbidden();
+    });
+
+    test('guests are redirected to log in when restoring an account', function () {
+        $account = User::factory()->staff()->create();
+        $account->delete();
+
+        $this->post(route('admin.staff.restore', $account))->assertRedirect(route('login'));
+    });
+});
+
+describe('force delete', function () {
+    test('an administrator permanently deletes a deleted account with no history', function () {
+        $admin = User::factory()->admin()->create();
+        $account = User::factory()->staff()->create();
+        $account->delete();
+
+        $this->actingAs($admin)
+            ->delete(route('admin.staff.force-delete', $account))
+            ->assertRedirect(route('admin.staff.index', ['deleted' => 1]))
+            ->assertSessionHas('status');
+
+        expect(User::withTrashed()->find($account->id))->toBeNull();
+
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_id' => $admin->id,
+            'action' => 'staff.permanently_deleted',
+            'subject_id' => $account->id,
+        ]);
+    });
+
+    test('an account with audit log history can not be permanently deleted', function () {
+        $admin = User::factory()->admin()->create();
+        $account = User::factory()->staff()->create();
+        $account->delete();
+        AuditLog::factory()->create(['actor_id' => $account->id]);
+
+        $this->actingAs($admin)
+            ->delete(route('admin.staff.force-delete', $account))
+            ->assertRedirect(route('admin.staff.index', ['deleted' => 1]))
+            ->assertSessionHas('error');
+
+        expect(User::withTrashed()->find($account->id))->not->toBeNull();
+    });
+
+    test('an account with document release history can not be permanently deleted', function () {
+        $admin = User::factory()->admin()->create();
+        $account = User::factory()->staff()->create();
+        $account->delete();
+        DocumentRelease::factory()->create(['released_by' => $account->id]);
+
+        $this->actingAs($admin)
+            ->delete(route('admin.staff.force-delete', $account))
+            ->assertRedirect(route('admin.staff.index', ['deleted' => 1]))
+            ->assertSessionHas('error');
+
+        expect(User::withTrashed()->find($account->id))->not->toBeNull();
+    });
+
+    test('an active account can not be permanently deleted', function () {
+        $admin = User::factory()->admin()->create();
+        $account = User::factory()->staff()->create();
+
+        $this->actingAs($admin)->delete(route('admin.staff.force-delete', $account))->assertForbidden();
+    });
+
+    test('staff can not permanently delete accounts', function () {
+        $account = User::factory()->staff()->create();
+        $account->delete();
+
+        $this->actingAs(User::factory()->staff()->create())
+            ->delete(route('admin.staff.force-delete', $account))
+            ->assertForbidden();
+    });
+
+    test('guests are redirected to log in when permanently deleting an account', function () {
+        $account = User::factory()->staff()->create();
+        $account->delete();
+
+        $this->delete(route('admin.staff.force-delete', $account))->assertRedirect(route('login'));
     });
 });

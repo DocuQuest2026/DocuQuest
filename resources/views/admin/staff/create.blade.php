@@ -12,7 +12,7 @@
                     @csrf
 
                     <p class="text-sm text-gray-600">
-                        {{ __('The new user will be emailed a link to set their own password.') }}
+                        {{ __('Set a password below. It will be emailed to the new user along with their sign-in details.') }}
                     </p>
 
                     <div>
@@ -35,6 +35,18 @@
                             @endforeach
                         </x-select-input>
                         <x-input-error class="mt-2" :messages="$errors->get('role')" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="password" :value="__('Password')" />
+                        <x-text-input id="password" name="password" type="password" class="mt-1 block w-full" required autocomplete="new-password" />
+                        <x-input-error class="mt-2" :messages="$errors->get('password')" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="password_confirmation" :value="__('Confirm password')" />
+                        <x-text-input id="password_confirmation" name="password_confirmation" type="password" class="mt-1 block w-full" required autocomplete="new-password" />
+                        <x-input-error class="mt-2" :messages="$errors->get('password_confirmation')" />
                     </div>
 
                     <div class="flex items-center gap-4">

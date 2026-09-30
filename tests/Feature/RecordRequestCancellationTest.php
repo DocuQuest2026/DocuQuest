@@ -4,7 +4,9 @@ use App\Enums\RequestStatus;
 use App\Mail\RecordRequestReceived;
 use App\Models\RecordRequest;
 use App\Models\User;
+use App\Notifications\RecordRequestCancellationRequested;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 
 test('submitting a request emails a confirmation with a working cancel link', function () {
     Mail::fake();
@@ -49,6 +51,35 @@ test('confirming through the signed link requests cancellation without cancellin
         ->and($recordRequest->cancelled_at)->toBeNull();
 
     $this->get($url)->assertOk()->assertSee('Cancellation requested');
+});
+
+test('requesting cancellation notifies active staff and admins, but not inactive or student accounts', function () {
+    Notification::fake();
+
+    $staff = User::factory()->staff()->create();
+    $admin = User::factory()->admin()->create();
+    $inactiveStaff = User::factory()->staff()->inactive()->create();
+    $student = User::factory()->create();
+
+    $recordRequest = RecordRequest::factory()->create();
+    $this->post($recordRequest->cancellationUrl());
+
+    Notification::assertSentTo([$staff, $admin], RecordRequestCancellationRequested::class);
+    Notification::assertNotSentTo([$inactiveStaff, $student], RecordRequestCancellationRequested::class);
+});
+
+test('the cancellation-requested notification links to the request', function () {
+    Notification::fake();
+
+    $staff = User::factory()->staff()->create();
+    $recordRequest = RecordRequest::factory()->create();
+
+    $this->post($recordRequest->cancellationUrl());
+
+    Notification::assertSentTo($staff, function (RecordRequestCancellationRequested $notification) use ($recordRequest) {
+        return $notification->toArray($notification)['url'] === route('requests.show', $recordRequest)
+            && $notification->toArray($notification)['reference_no'] === $recordRequest->reference_no;
+    });
 });
 
 test('cancel links that are unsigned, tampered with, or expired are rejected', function () {

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
@@ -31,7 +32,7 @@ use Illuminate\Support\Str;
 class RecordRequest extends Model
 {
     /** @use HasFactory<RecordRequestFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     /**
      * Get the attributes that should be cast.
@@ -47,6 +48,7 @@ class RecordRequest extends Model
             'status' => RequestStatus::class,
             'cancelled_at' => 'datetime',
             'cancellation_requested_at' => 'datetime',
+            'deleted_at' => 'datetime',
         ];
     }
 

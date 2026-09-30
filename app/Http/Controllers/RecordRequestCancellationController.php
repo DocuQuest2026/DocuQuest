@@ -5,11 +5,15 @@ namespace App\Http\Controllers;
 use App\Http\Requests\SendCancellationLinkRequest;
 use App\Mail\RecordRequestReceived;
 use App\Models\RecordRequest;
+use App\Models\User;
+use App\Notifications\RecordRequestCancellationRequested;
 use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\View\View;
+use Throwable;
 
 class RecordRequestCancellationController extends Controller
 {
@@ -59,6 +63,15 @@ class RecordRequestCancellationController extends Controller
         if ($recordRequest->isCancellable()) {
             $recordRequest->requestCancellation();
             $this->audit->log(null, 'request.cancellation_requested', $recordRequest);
+
+            try {
+                Notification::send(
+                    User::office()->active()->get(),
+                    new RecordRequestCancellationRequested($recordRequest)
+                );
+            } catch (Throwable $exception) {
+                report($exception);
+            }
         }
 
         return redirect($request->fullUrl());

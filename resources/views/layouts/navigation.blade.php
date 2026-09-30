@@ -31,7 +31,57 @@
             </div>
 
             <!-- Settings Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
+            <div class="hidden sm:flex sm:items-center sm:ms-6 sm:gap-3">
+                @if (Auth::user()->isOfficeUser())
+                    @php
+                        $unreadNotifications = Auth::user()->unreadNotifications()->count();
+                        $recentNotifications = Auth::user()->notifications()->latest()->limit(10)->get();
+                    @endphp
+
+                    <x-dropdown align="right" width="w-80">
+                        <x-slot name="trigger">
+                            <button class="relative inline-flex items-center p-2 rounded-md text-gray-500 hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
+                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                                </svg>
+
+                                @if ($unreadNotifications > 0)
+                                    <span class="absolute top-0 right-0 inline-flex items-center justify-center h-4 w-4 rounded-full bg-red-600 text-[10px] font-semibold text-white">
+                                        {{ $unreadNotifications > 9 ? '9+' : $unreadNotifications }}
+                                    </span>
+                                @endif
+                            </button>
+                        </x-slot>
+
+                        <x-slot name="content">
+                            <div class="flex items-center justify-between px-4 py-2 border-b border-gray-100">
+                                <span class="text-sm font-semibold text-gray-700">{{ __('Notifications') }}</span>
+
+                                @if ($unreadNotifications > 0)
+                                    <form method="POST" action="{{ route('notifications.read-all') }}">
+                                        @csrf
+                                        <button type="submit" class="text-xs text-indigo-600 hover:text-indigo-800 underline">{{ __('Mark all read') }}</button>
+                                    </form>
+                                @endif
+                            </div>
+
+                            <div class="max-h-80 overflow-y-auto">
+                                @forelse ($recentNotifications as $notification)
+                                    <form method="POST" action="{{ route('notifications.read', $notification) }}">
+                                        @csrf
+                                        <button type="submit" class="block w-full text-left px-4 py-3 text-sm hover:bg-gray-100 {{ $notification->read_at ? 'text-gray-500' : 'text-gray-900 font-medium bg-indigo-50' }}">
+                                            {{ __(':name asked to cancel :reference', ['name' => $notification->data['student_name'], 'reference' => $notification->data['reference_no']]) }}
+                                            <span class="block text-xs font-normal text-gray-400">{{ $notification->created_at->diffForHumans() }}</span>
+                                        </button>
+                                    </form>
+                                @empty
+                                    <p class="px-4 py-6 text-sm text-gray-500 text-center">{{ __('No notifications yet.') }}</p>
+                                @endforelse
+                            </div>
+                        </x-slot>
+                    </x-dropdown>
+                @endif
+
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
@@ -95,6 +145,46 @@
                 </x-responsive-nav-link>
             @endcan
         </div>
+
+        @if (Auth::user()->isOfficeUser())
+            @php
+                $unreadNotificationsMobile = Auth::user()->unreadNotifications()->count();
+                $recentNotificationsMobile = Auth::user()->notifications()->latest()->limit(10)->get();
+            @endphp
+
+            <div class="pt-4 pb-1 border-t border-gray-200">
+                <div class="flex items-center justify-between px-4">
+                    <span class="font-medium text-base text-gray-800">
+                        {{ __('Notifications') }}
+                        @if ($unreadNotificationsMobile > 0)
+                            <span class="ms-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-600 text-[10px] font-semibold text-white">
+                                {{ $unreadNotificationsMobile > 9 ? '9+' : $unreadNotificationsMobile }}
+                            </span>
+                        @endif
+                    </span>
+
+                    @if ($unreadNotificationsMobile > 0)
+                        <form method="POST" action="{{ route('notifications.read-all') }}">
+                            @csrf
+                            <button type="submit" class="text-xs text-indigo-600 hover:text-indigo-800 underline">{{ __('Mark all read') }}</button>
+                        </form>
+                    @endif
+                </div>
+
+                <div class="mt-3 space-y-1">
+                    @forelse ($recentNotificationsMobile as $notification)
+                        <form method="POST" action="{{ route('notifications.read', $notification) }}">
+                            @csrf
+                            <button type="submit" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 {{ $notification->read_at ? 'text-gray-500' : 'text-gray-900 font-medium' }}">
+                                {{ __(':name asked to cancel :reference', ['name' => $notification->data['student_name'], 'reference' => $notification->data['reference_no']]) }}
+                            </button>
+                        </form>
+                    @empty
+                        <p class="px-4 py-2 text-sm text-gray-500">{{ __('No notifications yet.') }}</p>
+                    @endforelse
+                </div>
+            </div>
+        @endif
 
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200">

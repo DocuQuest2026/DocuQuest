@@ -14,7 +14,7 @@ class DocumentVerificationController extends Controller
     public function show(DocumentRelease $documentRelease): View
     {
         return view('document-verification.show', [
-            'release' => $documentRelease->load('recordRequest'),
+            'release' => $documentRelease->load(['recordRequest' => fn ($query) => $query->withTrashed()]),
         ]);
     }
 }

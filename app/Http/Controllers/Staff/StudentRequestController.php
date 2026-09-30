@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Staff;
 
+use App\Enums\RequestStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Staff\RejectRecordRequestRequest;
 use App\Mail\RecordRequestRejected;
 use App\Models\RecordRequest;
 use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
@@ -15,22 +17,59 @@ use Throwable;
 
 class StudentRequestController extends Controller
 {
+    /**
+     * Statuses shown as their own filter tab on the requests list, alongside "All".
+     *
+     * @var array<int, RequestStatus>
+     */
+    private const FILTERABLE_STATUSES = [
+        RequestStatus::Pending,
+        RequestStatus::Approved,
+        RequestStatus::Released,
+        RequestStatus::Rejected,
+    ];
+
     public function __construct(private AuditLogger $audit) {}
 
     /**
-     * List the submitted student record requests, newest first.
+     * List the submitted student record requests in first-come, first-served order (the
+     * oldest request at the top), optionally filtered by status or, for the "Deleted" tab,
+     * showing only soft-deleted requests.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
         Gate::authorize('viewAny', RecordRequest::class);
 
+        $showingDeleted = $request->query('status') === 'deleted';
+
+        if ($showingDeleted) {
+            $recordRequests = RecordRequest::onlyTrashed()
+                ->latest('deleted_at')
+                ->paginate(15)
+                ->withQueryString();
+            $statusFilter = null;
+        } else {
+            $statusFilter = RequestStatus::tryFrom((string) $request->query('status'));
+            $statusFilter = in_array($statusFilter, self::FILTERABLE_STATUSES, true) ? $statusFilter : null;
+
+            $recordRequests = RecordRequest::query()
+                ->when($statusFilter, fn ($query) => $query->where('status', $statusFilter))
+                ->oldest()
+                ->orderBy('id')
+                ->paginate(15)
+                ->withQueryString();
+        }
+
         return view('staff.requests.index', [
-            'recordRequests' => RecordRequest::latest()->orderByDesc('id')->paginate(15),
+            'recordRequests' => $recordRequests,
+            'statusFilter' => $statusFilter,
+            'showingDeleted' => $showingDeleted,
+            'filterableStatuses' => self::FILTERABLE_STATUSES,
         ]);
     }
 
     /**
-     * Show a single student record request.
+     * Show a single student record request, including a deleted one.
      */
     public function show(RecordRequest $recordRequest): View
     {
@@ -99,5 +138,31 @@ class StudentRequestController extends Controller
         $this->audit->log(auth()->user(), 'request.cancellation_denied', $recordRequest);
 
         return back()->with('status', __('Cancellation denied; the request is active again.'));
+    }
+
+    /**
+     * Soft delete the request. The record and its audit trail are kept.
+     */
+    public function destroy(RecordRequest $recordRequest): RedirectResponse
+    {
+        Gate::authorize('delete', $recordRequest);
+
+        $this->audit->log(auth()->user(), 'request.deleted', $recordRequest);
+        $recordRequest->delete();
+
+        return redirect()->route('requests.index')->with('status', __('Request deleted.'));
+    }
+
+    /**
+     * Recover a previously deleted request.
+     */
+    public function restore(RecordRequest $recordRequest): RedirectResponse
+    {
+        Gate::authorize('restore', $recordRequest);
+
+        $recordRequest->restore();
+        $this->audit->log(auth()->user(), 'request.restored', $recordRequest);
+
+        return redirect()->route('requests.show', $recordRequest)->with('status', __('Request restored.'));
     }
 }

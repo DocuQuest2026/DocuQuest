@@ -44,4 +44,21 @@ class RecordRequestPolicy
     {
         return $user->isOfficeUser() && $recordRequest->isCancellationDeniable();
     }
+
+    /**
+     * Registrar staff and administrators can delete a request, in any status, to declutter
+     * the list. Deletion is a soft delete: the record and its audit trail are kept.
+     */
+    public function delete(User $user, RecordRequest $recordRequest): bool
+    {
+        return $user->isOfficeUser();
+    }
+
+    /**
+     * Registrar staff and administrators can recover a request they previously deleted.
+     */
+    public function restore(User $user, RecordRequest $recordRequest): bool
+    {
+        return $user->isOfficeUser() && $recordRequest->trashed();
+    }
 }

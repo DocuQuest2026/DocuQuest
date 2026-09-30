@@ -6,28 +6,42 @@ use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreStaffAccountRequest;
 use App\Http\Requests\Admin\UpdateStaffAccountRequest;
+use App\Mail\StaffAccountCredentials;
+use App\Models\AuditLog;
+use App\Models\DocumentRelease;
 use App\Models\User;
 use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
+use Throwable;
 
 class StaffAccountController extends Controller
 {
     public function __construct(private AuditLogger $audit) {}
 
     /**
-     * List the registrar's office accounts.
+     * List the registrar's office accounts, or, on the "Deleted" view, only deleted ones.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
         Gate::authorize('viewAny', User::class);
 
+        $showingDeleted = $request->boolean('deleted');
+
+        $accounts = User::office()
+            ->when($showingDeleted, fn ($query) => $query->onlyTrashed())
+            ->orderBy('name')
+            ->orderBy('id')
+            ->paginate(15)
+            ->withQueryString();
+
         return view('admin.staff.index', [
-            'accounts' => User::office()->orderBy('name')->orderBy('id')->paginate(15),
+            'accounts' => $accounts,
+            'showingDeleted' => $showingDeleted,
         ]);
     }
 
@@ -42,24 +56,30 @@ class StaffAccountController extends Controller
     }
 
     /**
-     * Create an office account. The administrator never sees a password: the new user
-     * receives a link to set their own.
+     * Create an office account with the password the administrator set. The new user is
+     * emailed their sign-in details.
      */
     public function store(StoreStaffAccountRequest $request): RedirectResponse
     {
+        $password = $request->validated('password');
+
         $account = new User($request->safe()->only(['name', 'email']));
-        $account->password = Str::random(40);
+        $account->password = $password;
         $account->role = Role::from($request->validated('role'));
         $account->email_verified_at = now();
         $account->save();
 
         $this->audit->log($request->user(), 'staff.created', $account, ['role' => $account->role->value]);
 
-        Password::sendResetLink(['email' => $account->email]);
+        try {
+            Mail::to($account->email)->send(new StaffAccountCredentials($account, $password));
+        } catch (Throwable $exception) {
+            report($exception);
+        }
 
         return redirect()
             ->route('admin.staff.index')
-            ->with('status', __('Account created. :name was emailed a link to set their password.', ['name' => $account->name]));
+            ->with('status', __(':name was emailed their sign-in details.', ['name' => $account->name]));
     }
 
     /**
@@ -103,5 +123,59 @@ class StaffAccountController extends Controller
         }
 
         return redirect()->route('admin.staff.index')->with('status', __('Account updated.'));
+    }
+
+    /**
+     * Soft delete an office account. The account and its audit trail are kept, and it can no
+     * longer sign in.
+     */
+    public function destroy(Request $request, User $user): RedirectResponse
+    {
+        Gate::authorize('delete', $user);
+
+        $this->audit->log($request->user(), 'staff.deleted', $user);
+        $user->delete();
+
+        return redirect()->route('admin.staff.index')->with('status', __('Account deleted.'));
+    }
+
+    /**
+     * Recover a previously deleted office account.
+     */
+    public function restore(Request $request, User $user): RedirectResponse
+    {
+        Gate::authorize('restore', $user);
+
+        $user->restore();
+        $this->audit->log($request->user(), 'staff.restored', $user);
+
+        return redirect()->route('admin.staff.index')->with('status', __('Account restored.'));
+    }
+
+    /**
+     * Permanently erase a deleted office account. Refused when audit or release history
+     * still references it, since that history can never be attributed to anyone again.
+     */
+    public function forceDelete(Request $request, User $user): RedirectResponse
+    {
+        Gate::authorize('forceDelete', $user);
+
+        $hasHistory = AuditLog::where('actor_id', $user->id)->exists()
+            || DocumentRelease::where('released_by', $user->id)->exists();
+
+        if ($hasHistory) {
+            return redirect()
+                ->route('admin.staff.index', ['deleted' => 1])
+                ->with('error', __(':name can not be permanently deleted: their audit or release history is still on record.', ['name' => $user->name]));
+        }
+
+        $this->audit->log($request->user(), 'staff.permanently_deleted', $user, [
+            'name' => $user->name,
+            'email' => $user->email,
+        ]);
+
+        $user->forceDelete();
+
+        return redirect()->route('admin.staff.index', ['deleted' => 1])->with('status', __('Account permanently deleted.'));
     }
 }
