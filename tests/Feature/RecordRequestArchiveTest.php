@@ -16,8 +16,8 @@ test('staff and administrators can archive a request', function (string $role) {
         ->and(RecordRequest::withTrashed()->find($recordRequest->id))->not->toBeNull();
 })->with(['staff', 'admin']);
 
-test('a request can be archived once it is no longer pending or approved', function (string $state) {
-    $recordRequest = RecordRequest::factory()->{$state}()->create();
+test('a rejected request can be archived', function () {
+    $recordRequest = RecordRequest::factory()->rejected()->create();
     $staff = User::factory()->staff()->create();
 
     $this->actingAs($staff)
@@ -25,9 +25,24 @@ test('a request can be archived once it is no longer pending or approved', funct
         ->assertRedirect(route('requests.index'));
 
     expect(RecordRequest::find($recordRequest->id))->toBeNull();
-})->with(['rejected', 'released', 'cancellationRequested', 'cancelled']);
+});
 
-test('a pending or approved request can not be archived and shows no archive button', function (?string $state) {
+test('a released request can be archived only once it has been claimed', function () {
+    $recordRequest = RecordRequest::factory()->released()->create();
+    $staff = User::factory()->staff()->create();
+
+    $this->actingAs($staff)->get(route('requests.show', $recordRequest))->assertDontSee(__('Archive request'));
+    $this->actingAs($staff)->delete(route('requests.destroy', $recordRequest))->assertForbidden();
+    expect(RecordRequest::find($recordRequest->id))->not->toBeNull();
+
+    $recordRequest->release->update(['claimed_at' => now()]);
+
+    $this->actingAs($staff)->get(route('requests.show', $recordRequest))->assertSee(__('Archive request'));
+    $this->actingAs($staff)->delete(route('requests.destroy', $recordRequest))->assertRedirect(route('requests.index'));
+    expect(RecordRequest::find($recordRequest->id))->toBeNull();
+});
+
+test('only rejected and claimed requests can be archived and others show no archive button', function (?string $state) {
     $recordRequest = $state ? RecordRequest::factory()->{$state}()->create() : RecordRequest::factory()->create();
     $staff = User::factory()->staff()->create();
 
@@ -35,7 +50,7 @@ test('a pending or approved request can not be archived and shows no archive but
     $this->actingAs($staff)->delete(route('requests.destroy', $recordRequest))->assertForbidden();
 
     expect(RecordRequest::find($recordRequest->id))->not->toBeNull();
-})->with([null, 'approved']);
+})->with([null, 'approved', 'cancellationRequested', 'cancelled']);
 
 test('an archived request no longer appears in the requests list', function () {
     $recordRequest = RecordRequest::factory()->rejected()->create();
@@ -60,6 +75,7 @@ test('archiving a request logs a archived audit entry', function () {
 test('archiving a released request does not break its public verification link', function () {
     $recordRequest = RecordRequest::factory()->released()->create();
     $release = $recordRequest->release()->first();
+    $release->update(['claimed_at' => now()]);
     $staff = User::factory()->staff()->create();
 
     $this->actingAs($staff)->delete(route('requests.destroy', $recordRequest));

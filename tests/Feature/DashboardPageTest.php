@@ -34,17 +34,20 @@ test('the dashboard tiles count what needs action and link to the right lists', 
         ->assertSee(route('requests.cancellations'), false);
 });
 
-test('the requests needing action badge counts pending, approved and cancellation requests together', function () {
-    RecordRequest::factory()->count(2)->create(['status' => RequestStatus::Pending]);
-    RecordRequest::factory()->approved()->count(3)->create();
-    RecordRequest::factory()->cancellationRequested()->create();
-    RecordRequest::factory()->released()->count(5)->create();
+test('the requests needing action list holds pending, approved and cancellation requests but not released ones', function () {
+    $pending = RecordRequest::factory()->create(['status' => RequestStatus::Pending]);
+    $approved = RecordRequest::factory()->approved()->create();
+    $cancellation = RecordRequest::factory()->cancellationRequested()->create();
+    $released = RecordRequest::factory()->released()->create();
 
     $staff = User::factory()->staff()->create();
 
     $this->actingAs($staff)->get(route('dashboard'))
         ->assertOk()
-        ->assertSeeInOrder(['Requests needing action', '6'])
+        ->assertSee($pending->reference_no)
+        ->assertSee($approved->reference_no)
+        ->assertSee($cancellation->reference_no)
+        ->assertDontSee($released->reference_no)
         ->assertDontSee('Showing the oldest');
 });
 

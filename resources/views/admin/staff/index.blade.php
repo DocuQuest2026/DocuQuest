@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            <h2 class="text-2xl font-bold tracking-tight text-gray-900">
                 {{ __('Staff accounts') }}
             </h2>
 
@@ -12,15 +12,15 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
             @if (session('status'))
-                <div class="p-4 bg-green-50 text-green-800 text-sm sm:rounded-lg" role="status">
+                <div class="p-4 bg-green-50 text-green-800 text-sm rounded-xl ring-1 ring-inset ring-green-200" role="status">
                     {{ session('status') }}
                 </div>
             @endif
 
             @if (session('error'))
-                <div class="p-4 bg-red-50 text-red-800 text-sm sm:rounded-lg" role="alert">
+                <div class="p-4 bg-red-50 text-red-800 text-sm rounded-xl ring-1 ring-inset ring-red-200" role="alert">
                     {{ session('error') }}
                 </div>
             @endif
@@ -28,19 +28,19 @@
             <div class="flex flex-wrap gap-2">
                 <a wire:navigate.hover
                     href="{{ route('admin.staff.index') }}"
-                    class="rounded-md px-3 py-1.5 text-sm font-medium {{ ! $showingDeleted ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }} shadow-sm"
+                    class="rounded-full px-4 py-1.5 text-sm font-semibold {{ ! $showingDeleted ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }} shadow-sm"
                 >
                     {{ __('Active accounts') }}
                 </a>
                 <a wire:navigate.hover
                     href="{{ route('admin.staff.index', ['deleted' => 1]) }}"
-                    class="rounded-md px-3 py-1.5 text-sm font-medium {{ $showingDeleted ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }} shadow-sm"
+                    class="rounded-full px-4 py-1.5 text-sm font-semibold {{ $showingDeleted ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }} shadow-sm"
                 >
                     {{ __('Deleted accounts') }}
                 </a>
             </div>
 
-            <div class="bg-white shadow-sm sm:rounded-lg overflow-x-auto">
+            <div class="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-2xl overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 text-sm">
                     <thead class="bg-gray-50 text-left text-gray-600">
                         <tr>

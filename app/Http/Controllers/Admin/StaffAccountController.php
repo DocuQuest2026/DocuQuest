@@ -6,7 +6,7 @@ use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreStaffAccountRequest;
 use App\Http\Requests\Admin\UpdateStaffAccountRequest;
-use App\Mail\StaffAccountCredentials;
+use App\Mail\ConfirmStaffAccountEmail;
 use App\Models\AuditLog;
 use App\Models\DocumentRelease;
 use App\Models\User;
@@ -14,13 +14,20 @@ use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Illuminate\View\View;
 use Throwable;
 
 class StaffAccountController extends Controller
 {
+    /**
+     * How long the emailed confirmation link works.
+     */
+    private const CONFIRMATION_HOURS = 24;
+
     public function __construct(private AuditLogger $audit) {}
 
     /**
@@ -56,31 +63,45 @@ class StaffAccountController extends Controller
     }
 
     /**
-     * Create an office account with the password the administrator set. The new user is
-     * emailed their sign-in details, but can not use the account until they verify the
-     * address is real by clicking the link in a separate verification email.
+     * Start creating an office account. Nothing is saved yet: a confirmation link is emailed
+     * to the address, and the account is only created once its owner opens that link (see
+     * ConfirmStaffAccountController). An address that is not real never gets the link.
      */
     public function store(StoreStaffAccountRequest $request): RedirectResponse
     {
-        $password = $request->validated('password');
+        $validated = $request->validated();
 
-        $account = new User($request->safe()->only(['name', 'email']));
-        $account->password = $password;
-        $account->role = Role::from($request->validated('role'));
-        $account->save();
+        $payload = Crypt::encryptString(json_encode([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'role' => $validated['role'],
+            'password' => $validated['password'],
+            'invited_by' => $request->user()->id,
+        ], JSON_THROW_ON_ERROR));
 
-        $this->audit->log($request->user(), 'staff.created', $account, ['role' => $account->role->value]);
+        $url = URL::temporarySignedRoute(
+            'staff-accounts.confirm',
+            now()->addHours(self::CONFIRMATION_HOURS),
+            ['payload' => $payload],
+        );
 
         try {
-            Mail::to($account->email)->send(new StaffAccountCredentials($account, $password));
-            $account->sendEmailVerificationNotification();
+            Mail::to($validated['email'])->send(new ConfirmStaffAccountEmail($validated['name'], $url, self::CONFIRMATION_HOURS));
         } catch (Throwable $exception) {
             report($exception);
+
+            return back()
+                ->withInput($request->except(['password', 'password_confirmation']))
+                ->withErrors(['email' => __('We could not send a confirmation email to this address. Check it and try again.')]);
         }
 
         return redirect()
             ->route('admin.staff.index')
-            ->with('status', __(':name was emailed their sign-in details and a link to verify their email.', ['name' => $account->name]));
+            ->with('status', __('A confirmation link was emailed to :email. The account for :name will only be created once they open it, within :hours hours.', [
+                'email' => $validated['email'],
+                'name' => $validated['name'],
+                'hours' => self::CONFIRMATION_HOURS,
+            ]));
     }
 
     /**

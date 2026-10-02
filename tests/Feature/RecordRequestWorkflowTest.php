@@ -92,3 +92,34 @@ test('guests are redirected to log in when approving or rejecting requests', fun
     $this->post(route('requests.approve', $recordRequest))->assertRedirect(route('login'));
     $this->post(route('requests.reject', $recordRequest), ['reason' => 'Because'])->assertRedirect(route('login'));
 });
+
+test('rejecting from the details page opens a modal that asks for the reason', function () {
+    $recordRequest = RecordRequest::factory()->create();
+    $staff = User::factory()->staff()->create();
+
+    $this->actingAs($staff)->get(route('requests.show', $recordRequest))
+        ->assertOk()
+        ->assertSee('Reject this request?')
+        ->assertSee('Reason for rejection')
+        ->assertSee('Reject request');
+});
+
+test('rejecting without a reason is refused and the reason must be given', function () {
+    $recordRequest = RecordRequest::factory()->create();
+    $staff = User::factory()->staff()->create();
+
+    $this->actingAs($staff)->post(route('requests.reject', $recordRequest), ['reason' => ''])
+        ->assertSessionHasErrors('reason');
+
+    expect($recordRequest->fresh()->status)->toBe(RequestStatus::Pending);
+});
+
+test('approving from the details page asks for confirmation first', function () {
+    $recordRequest = RecordRequest::factory()->create();
+    $staff = User::factory()->staff()->create();
+
+    $this->actingAs($staff)->get(route('requests.show', $recordRequest))
+        ->assertOk()
+        ->assertSee('Approve this request?')
+        ->assertSee('Yes, approve');
+});

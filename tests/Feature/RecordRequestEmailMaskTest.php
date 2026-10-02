@@ -57,3 +57,19 @@ test('guests are redirected to log in when revealing an email', function () {
 
     $this->post(route('requests.reveal-email', $recordRequest))->assertRedirect(route('login'));
 });
+
+test('the details page shows a reveal button until the email is revealed, then a revealed badge', function () {
+    $recordRequest = RecordRequest::factory()->create(['email' => 'juan.delacruz@gmail.com']);
+    $staff = User::factory()->staff()->create();
+
+    $this->actingAs($staff)->get(route('requests.show', $recordRequest))
+        ->assertOk()
+        ->assertSee('Reveal email')
+        ->assertDontSee('Email revealed');
+
+    $this->actingAs($staff)->followingRedirects()->post(route('requests.reveal-email', $recordRequest))
+        ->assertOk()
+        ->assertSee('Email revealed')
+        ->assertSee('juan.delacruz@gmail.com')
+        ->assertDontSee('Reveal email');
+});

@@ -1,13 +1,13 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="text-2xl font-bold tracking-tight text-gray-900">
             {{ __('Release :reference', ['reference' => $recordRequest->reference_no]) }}
         </h2>
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+        <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="p-4 sm:p-8 bg-white shadow-sm ring-1 ring-gray-900/5 rounded-2xl">
                 <p class="text-sm text-gray-600">
                     {{ __('Record who is claiming this document, and when they can pick it up.') }}
                 </p>

@@ -1,14 +1,13 @@
 <?php
 
 use App\Enums\Role;
+use App\Mail\ConfirmStaffAccountEmail;
 use App\Mail\StaffAccountCredentials;
 use App\Models\AuditLog;
 use App\Models\DocumentRelease;
 use App\Models\User;
-use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Notification;
 
 describe('access', function () {
     test('guests are redirected to the login screen', function () {
@@ -97,31 +96,58 @@ describe('store', function () {
         $this->assertDatabaseMissing('users', ['email' => 'xtestuser@gmail.com']);
     })->with([Role::Student, Role::Staff]);
 
-    test('an administrator creates an unverified staff account and emails their sign-in details', function () {
+    /**
+     * Submit the admin form and return the confirmation link that was emailed to the new user.
+     */
+    function sendConfirmationLink(array $overrides = [], ?User $admin = null): string
+    {
         Mail::fake();
-        Notification::fake();
-        $admin = User::factory()->admin()->create();
 
-        $this->actingAs($admin)
+        test()->actingAs($admin ?? User::factory()->admin()->create())
+            ->post(route('admin.staff.store'), validStaffAccount($overrides))
+            ->assertRedirect(route('admin.staff.index'));
+
+        $url = null;
+
+        Mail::assertSent(ConfirmStaffAccountEmail::class, function (ConfirmStaffAccountEmail $mail) use (&$url): bool {
+            $url = $mail->confirmationUrl;
+
+            return true;
+        });
+
+        return $url;
+    }
+
+    test('submitting the form only emails a confirmation link and creates no account yet', function () {
+        Mail::fake();
+
+        $this->actingAs(User::factory()->admin()->create())
             ->post(route('admin.staff.store'), validStaffAccount())
             ->assertRedirect(route('admin.staff.index'))
             ->assertSessionHas('status');
+
+        Mail::assertSent(ConfirmStaffAccountEmail::class, fn (ConfirmStaffAccountEmail $mail): bool => $mail->hasTo('ana.staff@gmail.com'));
+        Mail::assertNotSent(StaffAccountCredentials::class);
+        $this->assertDatabaseMissing('users', ['email' => 'ana.staff@gmail.com']);
+    });
+
+    test('opening the confirmation link creates a verified account and emails the sign-in details', function () {
+        $admin = User::factory()->admin()->create();
+        $url = sendConfirmationLink(admin: $admin);
+
+        Mail::fake();
+        auth()->logout();
+
+        $this->get($url)->assertOk()->assertSee('Your account has been created')->assertSee("An administrator created a registrar's office account for you");
 
         $account = User::where('email', 'ana.staff@gmail.com')->firstOrFail();
 
         expect($account->role)->toBe(Role::Staff)
             ->and($account->is_active)->toBeTrue()
-            ->and($account->hasVerifiedEmail())->toBeFalse()
+            ->and($account->hasVerifiedEmail())->toBeTrue()
             ->and(Hash::check('a-strong-password', $account->password))->toBeTrue();
 
-        Mail::assertSent(StaffAccountCredentials::class, function (StaffAccountCredentials $mail) use ($account) {
-            return $mail->hasTo($account->email)
-                && $mail->account->is($account)
-                && $mail->password === 'a-strong-password'
-                && str_contains($mail->render(), 'a-strong-password');
-        });
-
-        Notification::assertSentTo($account, VerifyEmail::class);
+        Mail::assertSent(StaffAccountCredentials::class, fn (StaffAccountCredentials $mail): bool => $mail->hasTo($account->email) && $mail->password === 'a-strong-password');
 
         $this->assertDatabaseHas('audit_logs', [
             'actor_id' => $admin->id,
@@ -130,47 +156,74 @@ describe('store', function () {
         ]);
     });
 
-    test('a new staff account can not access staff pages until the email is verified', function () {
-        Mail::fake();
-        $admin = User::factory()->admin()->create();
+    test('the new staff member can sign in right after confirming, without another verification step', function () {
+        $url = sendConfirmationLink();
 
-        $this->actingAs($admin)->post(route('admin.staff.store'), validStaffAccount());
-
-        $account = User::where('email', 'ana.staff@gmail.com')->firstOrFail();
-
-        $this->actingAs($account)
-            ->get(route('dashboard'))
-            ->assertRedirect(route('verification.notice'));
-
-        $account->markEmailAsVerified();
-
-        $this->actingAs($account)->get(route('dashboard'))->assertOk();
-    });
-
-    test('the password set during creation can be used to sign in', function () {
-        Mail::fake();
-        $admin = User::factory()->admin()->create();
-
-        $this->actingAs($admin)->post(route('admin.staff.store'), validStaffAccount());
-
-        $account = User::where('email', 'ana.staff@gmail.com')->firstOrFail();
-
-        // Log the admin out first: the staff login route is guest-only, and actingAs() would
-        // otherwise leave the admin authenticated for the rest of this test.
         $this->post('/logout');
+        $this->get($url);
+
+        $account = User::where('email', 'ana.staff@gmail.com')->firstOrFail();
 
         $this->post(config('auth.staff_login_path'), ['email' => 'ana.staff@gmail.com', 'password' => 'a-strong-password'])
             ->assertRedirect(route('dashboard', absolute: false));
         $this->assertAuthenticatedAs($account);
+
+        $this->get(route('dashboard'))->assertOk();
     });
 
-    test('an administrator can create another administrator', function () {
-        Mail::fake();
+    test('an administrator can create another administrator through the link', function () {
+        $url = sendConfirmationLink(['name' => 'Bea Admin', 'email' => 'bea.admin@gmail.com', 'role' => 'admin']);
 
-        $this->actingAs(User::factory()->admin()->create())
-            ->post(route('admin.staff.store'), validStaffAccount(['name' => 'Bea Admin', 'email' => 'bea.admin@gmail.com', 'role' => 'admin']));
+        $this->post('/logout');
+        $this->get($url);
 
         expect(User::where('email', 'bea.admin@gmail.com')->firstOrFail()->role)->toBe(Role::Admin);
+    });
+
+    test('a tampered, unsigned or expired link creates nothing', function () {
+        $url = sendConfirmationLink();
+
+        $this->post('/logout');
+
+        $this->get(route('staff-accounts.confirm', ['payload' => 'garbage']))->assertForbidden();
+        $this->get(str_replace('payload=', 'payload=x', $url))->assertForbidden();
+
+        $this->travel(25)->hours();
+        $this->get($url)->assertForbidden();
+
+        $this->assertDatabaseMissing('users', ['email' => 'ana.staff@gmail.com']);
+    });
+
+    test('opening the link twice does not create a second account', function () {
+        $url = sendConfirmationLink();
+
+        $this->post('/logout');
+        $this->get($url);
+        $this->get($url)->assertOk()->assertSee('Your account is already created');
+
+        expect(User::where('email', 'ana.staff@gmail.com')->count())->toBe(1);
+    });
+
+    test('a link set up by someone who is no longer an administrator creates nothing', function () {
+        $admin = User::factory()->admin()->create();
+        $url = sendConfirmationLink(admin: $admin);
+
+        $admin->forceFill(['role' => Role::Staff])->save();
+        auth()->logout();
+
+        $this->get($url)->assertOk()->assertSee('This link is not valid');
+
+        $this->assertDatabaseMissing('users', ['email' => 'ana.staff@gmail.com']);
+    });
+
+    test('nothing is created and an error is shown if the confirmation email can not be sent', function () {
+        Mail::shouldReceive('to')->once()->andThrow(new RuntimeException('SMTP down'));
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->post(route('admin.staff.store'), validStaffAccount())
+            ->assertSessionHasErrors('email');
+
+        $this->assertDatabaseMissing('users', ['email' => 'ana.staff@gmail.com']);
     });
 
     test('an office account can not be created with the student role', function () {

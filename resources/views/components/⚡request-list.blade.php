@@ -316,6 +316,7 @@ new class extends Component
 
 <div
     class="space-y-4"
+    x-effect="$dispatch('request-badges-updated', { pending: $wire.badges['pending'] ?? 0 })"
     x-data="{
         tab: @js($this->activeTab()),
         select(tab) {
@@ -323,7 +324,7 @@ new class extends Component
             this.$wire.setStatus(tab);
         },
         tabClass(tab) {
-            return this.tab === tab ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50';
+            return this.tab === tab ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-gray-700 ring-1 ring-inset ring-gray-200 hover:bg-gray-50';
         },
         rowVisible(row) {
             const words = this.$wire.search.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -353,20 +354,23 @@ new class extends Component
     }"
 >
     <div class="flex flex-wrap gap-2">
-        <x-text-input
+        <div class="relative w-full sm:max-w-md">
+            <svg class="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+            <x-text-input
             type="search"
             wire:model.live.debounce.250ms="search"
             placeholder="{{ __('Search by name, reference no. or student no.') }}"
             aria-label="{{ __('Search requests') }}"
-            class="block w-full sm:max-w-md"
+            class="block w-full rounded-lg py-2.5 pl-10"
             autocomplete="off"
         />
+        </div>
 
         @if ($this->search !== '')
             <button
                 type="button"
                 wire:click="$set('search', '')"
-                class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm text-gray-600 shadow-sm hover:bg-gray-50"
+                class="inline-flex items-center rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-inset ring-gray-200 hover:bg-gray-50"
             >{{ __('Clear') }}</button>
         @endif
 
@@ -376,11 +380,12 @@ new class extends Component
             wire:model.live="month"
             aria-label="{{ __('Filter by month submitted') }}"
             title="{{ __('Show only requests submitted in this month') }}"
-            class="block"
+            class="block rounded-lg py-2.5"
         />
 
         <x-select-input
             wire:model.live="day"
+            class="rounded-lg py-2.5"
             aria-label="{{ __('Filter by day submitted') }}"
             title="{{ __('Show only requests submitted on this day') }}"
         >
@@ -396,7 +401,7 @@ new class extends Component
             type="button"
             x-on:click="select('')"
             :class="tabClass('')"
-            class="rounded-md px-3 py-1.5 text-sm font-medium shadow-sm"
+            class="rounded-full px-4 py-1.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
         >
             {{ __('All') }}
         </button>
@@ -405,7 +410,7 @@ new class extends Component
                 type="button"
                 x-on:click="select('{{ $filterableStatus->value }}')"
                 :class="tabClass('{{ $filterableStatus->value }}')"
-                class="rounded-md px-3 py-1.5 text-sm font-medium shadow-sm"
+                class="rounded-full px-4 py-1.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             >
                 {{ $filterableStatus->label() }}
                 @if (in_array($filterableStatus, [RequestStatus::Pending, RequestStatus::Approved, RequestStatus::Released], true))
@@ -423,7 +428,7 @@ new class extends Component
                     type="button"
                     x-on:click="select('claimed')"
                     :class="tabClass('claimed')"
-                    class="rounded-md px-3 py-1.5 text-sm font-medium shadow-sm"
+                    class="rounded-full px-4 py-1.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                 >
                     {{ __('Claimed') }}
                 </button>
@@ -434,38 +439,28 @@ new class extends Component
             type="button"
             x-on:click="select('archived')"
             :class="tabClass('archived')"
-            class="rounded-md px-3 py-1.5 text-sm font-medium shadow-sm"
+            class="rounded-full px-4 py-1.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
         >
             {{ __('Archived') }}
         </button>
     </div>
 
-    <div class="bg-white shadow-sm sm:rounded-lg overflow-x-auto transition-opacity" wire:loading.class="opacity-50" wire:target="search,month,day,setStatus,gotoPage,nextPage,previousPage">
+    <div class="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-2xl overflow-x-auto transition-opacity" wire:loading.class="opacity-50" wire:target="search,month,day,setStatus,gotoPage,nextPage,previousPage">
         <table class="min-w-full divide-y divide-gray-200 text-sm">
-            <thead class="bg-gray-50 text-left text-gray-600">
+            <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-600">
                 <tr>
-                    <th scope="col" class="px-4 py-3 font-medium">{{ __('Reference') }}</th>
-                    <th scope="col" class="px-4 py-3 font-medium">{{ __('Student') }}</th>
-                    <th scope="col" class="px-4 py-3 font-medium">{{ __('Document') }}</th>
-                    <th scope="col" class="px-4 py-3 font-medium">{{ __('Copies') }}</th>
-                    <th scope="col" class="px-4 py-3 font-medium">
+                    <th scope="col" class="px-5 py-3 font-semibold">{{ __('Reference') }}</th>
+                    <th scope="col" class="px-5 py-3 font-semibold">{{ __('Student') }}</th>
+                    <th scope="col" class="px-5 py-3 font-semibold">{{ __('Document') }}</th>
+                    <th scope="col" class="px-5 py-3 font-semibold">{{ __('Copies') }}</th>
+                    <th scope="col" class="px-5 py-3 font-semibold">
                         {{ $this->showingArchived() ? __('Archived') : ($this->showingClaimed() ? __('Claimed') : __('Submitted')) }}
                     </th>
-                    <th scope="col" class="px-4 py-3 font-medium">{{ __('Status') }}</th>
-                    <th scope="col" class="px-4 py-3"><span class="sr-only">{{ __('Actions') }}</span></th>
+                    <th scope="col" class="px-5 py-3 font-semibold">{{ __('Status') }}</th>
+                    <th scope="col" class="px-5 py-3"><span class="sr-only">{{ __('Actions') }}</span></th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100">
-                @php
-                    $statusColors = [
-                        RequestStatus::Pending->value => 'bg-yellow-100 text-yellow-800',
-                        RequestStatus::Approved->value => 'bg-blue-100 text-blue-800',
-                        RequestStatus::Released->value => 'bg-green-100 text-green-800',
-                        RequestStatus::Rejected->value => 'bg-red-100 text-red-800',
-                        RequestStatus::CancellationRequested->value => 'bg-orange-100 text-orange-800',
-                        RequestStatus::Cancelled->value => 'bg-gray-200 text-gray-700',
-                    ];
-                @endphp
+            <tbody class="divide-y divide-gray-100 [&>tr:hover]:bg-gray-50">
                 @forelse ($this->recordRequests as $recordRequest)
                     <tr
                         wire:key="request-{{ $recordRequest->id }}"
@@ -476,14 +471,14 @@ new class extends Component
                         data-claimed="{{ $recordRequest->relationLoaded('release') && $recordRequest->release?->claimed_at ? 1 : 0 }}"
                         x-show="rowVisible($el.dataset)"
                     >
-                        <td class="px-4 py-3 font-medium text-gray-900">{{ $recordRequest->reference_no }}</td>
-                        <td class="px-4 py-3 text-gray-600">
+                        <td class="px-5 py-4 font-medium text-gray-900">{{ $recordRequest->reference_no }}</td>
+                        <td class="px-5 py-4 text-gray-600">
                             {{ $recordRequest->fullName() }}
-                            <span class="block text-xs text-gray-500">{{ $recordRequest->student_no }}</span>
+                            <span class="block text-sm text-gray-600">{{ $recordRequest->student_no }}</span>
                         </td>
-                        <td class="px-4 py-3 text-gray-600">{{ $recordRequest->document_type->label() }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ $recordRequest->copies }}</td>
-                        <td class="px-4 py-3 text-gray-600">
+                        <td class="px-5 py-4 text-gray-600">{{ $recordRequest->document_type->label() }}</td>
+                        <td class="px-5 py-4 text-gray-600">{{ $recordRequest->copies }}</td>
+                        <td class="px-5 py-4 text-gray-600">
                             @php
                                 $dateColumn = $this->showingArchived()
                                     ? $recordRequest->deleted_at
@@ -491,18 +486,18 @@ new class extends Component
                             @endphp
                             {{ $dateColumn->format('M j, Y g:i A') }}
                         </td>
-                        <td class="px-4 py-3">
-                            <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium {{ $statusColors[$recordRequest->status->value] }}">{{ $recordRequest->status->label() }}</span>
+                        <td class="px-5 py-4">
+                            <span class="inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $recordRequest->staffStatus()["classes"] }}">{{ $recordRequest->staffStatus()["label"] }}</span>
                         </td>
-                        <td class="px-4 py-3 text-right space-x-3 whitespace-nowrap">
-                            <a wire:navigate.hover href="{{ route('requests.show', $recordRequest) }}" class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">{{ __('View') }}</a>
+                        <td class="px-5 py-4 text-right space-x-3 whitespace-nowrap">
+                            <a wire:navigate.hover href="{{ route('requests.show', $recordRequest) }}" class="inline-flex items-center rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">{{ __('View') }}</a>
 
                             @can('claim', $recordRequest)
                                 <button
                                     type="button"
                                     x-data=""
                                     x-on:click.prevent="$dispatch('open-modal', 'confirm-claim-{{ $recordRequest->id }}')"
-                                    class="inline-flex items-center rounded-md bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700"
+                                    class="inline-flex items-center rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700"
                                 >{{ __('Claim') }}</button>
 
                                 <x-modal name="confirm-claim-{{ $recordRequest->id }}" focusable>
@@ -543,14 +538,14 @@ new class extends Component
                             @can('restore', $recordRequest)
                                 <form method="POST" action="{{ route('requests.restore', $recordRequest) }}" class="inline">
                                     @csrf
-                                    <button type="submit" class="inline-flex items-center rounded-md bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700">{{ __('Restore') }}</button>
+                                    <button type="submit" class="inline-flex items-center rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700">{{ __('Restore') }}</button>
                                 </form>
                             @endcan
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                        <td colspan="7" class="px-5 py-12 text-center text-gray-600">
                             @if (trim($this->search) !== '')
                                 {{ __('No requests match your search.') }}
                             @elseif ($this->day !== '')

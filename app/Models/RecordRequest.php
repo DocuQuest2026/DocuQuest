@@ -111,6 +111,25 @@ class RecordRequest extends Model
     }
 
     /**
+     * How staff see the status: the badge label and its color classes. A released document that
+     * has been picked up shows as claimed.
+     *
+     * @return array{label: string, classes: string}
+     */
+    public function staffStatus(): array
+    {
+        return match (true) {
+            $this->status === RequestStatus::Released && $this->release?->isClaimed() => ['label' => __('Claimed'), 'classes' => 'bg-teal-100 text-teal-800'],
+            $this->status === RequestStatus::Pending => ['label' => $this->status->label(), 'classes' => 'bg-amber-100 text-amber-800'],
+            $this->status === RequestStatus::Approved => ['label' => $this->status->label(), 'classes' => 'bg-blue-100 text-blue-800'],
+            $this->status === RequestStatus::Released => ['label' => $this->status->label(), 'classes' => 'bg-green-100 text-green-800'],
+            $this->status === RequestStatus::Rejected => ['label' => $this->status->label(), 'classes' => 'bg-red-100 text-red-800'],
+            $this->status === RequestStatus::CancellationRequested => ['label' => $this->status->label(), 'classes' => 'bg-orange-100 text-orange-800'],
+            default => ['label' => $this->status->label(), 'classes' => 'bg-gray-200 text-gray-700'],
+        };
+    }
+
+    /**
      * The fee in pesos for all copies of the document: the per-copy fee times the copies.
      */
     public function totalFee(): int

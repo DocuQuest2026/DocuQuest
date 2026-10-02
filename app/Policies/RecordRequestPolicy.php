@@ -65,14 +65,19 @@ class RecordRequestPolicy
     }
 
     /**
-     * Registrar staff and administrators can archive a request to declutter
-     * the list, except while it is still pending or approved and needs action. Archiving is a
-     * soft delete: the record and its audit trail are kept.
+     * Registrar staff and administrators can archive a request to declutter the list, but only
+     * once it is finished: rejected, or released and already claimed. Anything still open,
+     * awaiting pickup or cancelled stays on the list. Archiving is a soft delete: the record
+     * and its audit trail are kept.
      */
     public function delete(User $user, RecordRequest $recordRequest): bool
     {
-        return $user->isOfficeUser()
-            && ! in_array($recordRequest->status, [RequestStatus::Pending, RequestStatus::Approved], true);
+        if (! $user->isOfficeUser()) {
+            return false;
+        }
+
+        return $recordRequest->status === RequestStatus::Rejected
+            || ($recordRequest->status === RequestStatus::Released && $recordRequest->release?->isClaimed() === true);
     }
 
     /**

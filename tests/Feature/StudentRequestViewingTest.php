@@ -99,13 +99,13 @@ test('the nav shows a badge with the count of new pending requests', function ()
 
     $this->actingAs($staff)->get(route('dashboard'))
         ->assertOk()
-        ->assertSeeInOrder(['Student requests', '3']);
+        ->assertSeeInOrder(['Student Requests', '3']);
 });
 
 test('the nav shows no badge on student requests when nothing is pending', function () {
     $staff = User::factory()->staff()->create();
 
-    $this->actingAs($staff)->get(route('dashboard'))->assertOk()->assertSee('Student requests');
+    $this->actingAs($staff)->get(route('dashboard'))->assertOk()->assertSee('Student Requests');
 });
 
 test('staff can search student requests by name, reference number or student number', function () {

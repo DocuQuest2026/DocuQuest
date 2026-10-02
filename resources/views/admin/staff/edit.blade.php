@@ -1,19 +1,19 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="text-2xl font-bold tracking-tight text-gray-900">
             {{ __('Edit account') }}
         </h2>
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             @if (session('status'))
-                <div class="p-4 bg-green-50 text-green-800 text-sm sm:rounded-lg" role="status">
+                <div class="p-4 bg-green-50 text-green-800 text-sm rounded-xl ring-1 ring-inset ring-green-200" role="status">
                     {{ session('status') }}
                 </div>
             @endif
 
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+            <div class="p-4 sm:p-8 bg-white shadow-sm ring-1 ring-gray-900/5 rounded-2xl">
                 <form method="POST" action="{{ route('admin.staff.update', $account) }}" class="max-w-xl space-y-6">
                     @csrf
                     @method('PUT')
@@ -57,14 +57,14 @@
                 </form>
             </div>
 
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+            <div class="p-4 sm:p-8 bg-white shadow-sm ring-1 ring-gray-900/5 rounded-2xl">
                 <div class="max-w-xl">
                     @include('admin.partials.reset-password-form')
                 </div>
             </div>
 
             @can('delete', $account)
-                <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+                <div class="p-4 sm:p-8 bg-white shadow-sm ring-1 ring-gray-900/5 rounded-2xl">
                     <div class="max-w-xl space-y-6">
                         <header>
                             <h2 class="text-lg font-medium text-gray-900">{{ __('Delete account') }}</h2>

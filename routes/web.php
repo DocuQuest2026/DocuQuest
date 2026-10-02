@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AccountPasswordController;
 use App\Http\Controllers\Admin\StaffAccountController;
+use App\Http\Controllers\Auth\ConfirmStaffAccountController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentVerificationController;
 use App\Http\Controllers\NotificationController;
@@ -17,6 +18,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/staff-accounts/confirm', ConfirmStaffAccountController::class)
+    ->middleware(['signed', 'throttle:10,1'])
+    ->name('staff-accounts.confirm');
 
 Route::get('/request', [RecordRequestController::class, 'create'])->name('record-requests.create');
 Route::post('/request', [RecordRequestController::class, 'store'])

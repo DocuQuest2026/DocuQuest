@@ -152,3 +152,18 @@ test('the All tab still shows released requests regardless of claim status', fun
         ->assertSee($claimed->reference_no)
         ->assertSee($unclaimed->reference_no);
 });
+
+test('staff see a released document as claimed once it has been picked up', function () {
+    $recordRequest = RecordRequest::factory()->released()->create();
+
+    expect($recordRequest->staffStatus()['label'])->toBe('Released');
+
+    $recordRequest->release->update(['claimed_at' => now()]);
+
+    expect($recordRequest->fresh()->staffStatus()['label'])->toBe('Claimed');
+
+    $this->actingAs(User::factory()->staff()->create())
+        ->get(route('requests.show', $recordRequest))
+        ->assertOk()
+        ->assertSee('Claimed');
+});

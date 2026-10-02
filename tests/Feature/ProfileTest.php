@@ -156,3 +156,25 @@ test('correct password must be provided to delete account', function () {
 
     $this->assertNotNull($user->fresh());
 });
+
+test('staff can not delete their own account', function () {
+    $staff = User::factory()->staff()->create();
+
+    $this->actingAs($staff)
+        ->delete('/profile', ['password' => 'password'])
+        ->assertForbidden();
+
+    expect($staff->fresh())->not->toBeNull();
+});
+
+test('the delete account section is hidden from staff but shown to administrators', function () {
+    $this->actingAs(User::factory()->staff()->create())
+        ->get('/profile')
+        ->assertOk()
+        ->assertDontSee('Delete Account');
+
+    $this->actingAs(User::factory()->admin()->create())
+        ->get('/profile')
+        ->assertOk()
+        ->assertSee('Delete Account');
+});

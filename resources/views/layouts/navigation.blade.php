@@ -17,44 +17,11 @@
                     <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-700 shadow-md shadow-indigo-600/30 ring-1 ring-inset ring-white/20 transition group-hover:scale-105">
                         <x-application-logo class="h-5 w-5 fill-current text-white" />
                     </span>
-                    <span class="hidden flex-col leading-tight lg:flex">
+                    <span class="hidden flex-col leading-tight sm:flex">
                         <span class="text-lg font-bold tracking-tight text-gray-900">{{ config('app.name', 'DocuQuest') }}</span>
                         <span class="text-[10px] font-semibold uppercase tracking-widest text-indigo-600">{{ __('Registrar workspace') }}</span>
                     </span>
                 </a>
-
-                <!-- Navigation Links -->
-                <div class="hidden items-center gap-1 md:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        {{ __('Dashboard') }}
-                    </x-nav-link>
-
-                    @can('viewAny', \App\Models\RecordRequest::class)
-                        <x-nav-link :href="route('requests.cancellations')" :active="request()->routeIs('requests.cancellations')">
-                            {{ __('Cancellation requests') }}
-                            @if ($pendingCancellationsCount > 0)
-                                <span class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">
-                                    {{ $pendingCancellationsCount > 9 ? '9+' : $pendingCancellationsCount }}
-                                </span>
-                            @endif
-                        </x-nav-link>
-
-                        <x-nav-link :href="route('requests.index')" :active="request()->routeIs('requests.index') || request()->routeIs('requests.show')">
-                            {{ __('Student requests') }}
-                            @if ($pendingRequestsCount > 0)
-                                <span class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">
-                                    {{ $pendingRequestsCount > 9 ? '9+' : $pendingRequestsCount }}
-                                </span>
-                            @endif
-                        </x-nav-link>
-                    @endcan
-
-                    @can('viewAny', \App\Models\User::class)
-                        <x-nav-link :href="route('admin.staff.index')" :active="request()->routeIs('admin.staff.*')">
-                            {{ __('Staff accounts') }}
-                        </x-nav-link>
-                    @endcan
-                </div>
             </div>
 
             <!-- Settings Dropdown -->
@@ -108,6 +75,45 @@
         </div>
     </div>
 
+    <!-- Navigation Links (second row, large screens) -->
+    <div class="hidden border-t border-gray-100 md:block">
+        <div class="max-w-7xl mx-auto flex items-center gap-1 px-4 py-2 sm:px-6 lg:px-8">
+            <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                {{ __('Dashboard') }}
+            </x-nav-link>
+
+            @can('viewAny', \App\Models\RecordRequest::class)
+                <x-nav-link :href="route('requests.index')" :active="request()->routeIs('requests.index') || request()->routeIs('requests.show')">
+                    {{ __('Student Requests') }}
+                    @if ($pendingRequestsCount > 0)
+                        <span
+                            x-data="{ count: {{ $pendingRequestsCount }} }"
+                            x-on:request-badges-updated.window="count = $event.detail.pending"
+                            x-show="count > 0"
+                            x-text="count > 9 ? '9+' : count"
+                            class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white"
+                        >{{ $pendingRequestsCount > 9 ? '9+' : $pendingRequestsCount }}</span>
+                    @endif
+                </x-nav-link>
+
+                <x-nav-link :href="route('requests.cancellations')" :active="request()->routeIs('requests.cancellations')">
+                    {{ __('Cancellation Requests') }}
+                    @if ($pendingCancellationsCount > 0)
+                        <span class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">
+                            {{ $pendingCancellationsCount > 9 ? '9+' : $pendingCancellationsCount }}
+                        </span>
+                    @endif
+                </x-nav-link>
+            @endcan
+
+            @can('viewAny', \App\Models\User::class)
+                <x-nav-link :href="route('admin.staff.index')" :active="request()->routeIs('admin.staff.*')">
+                    {{ __('Staff accounts') }}
+                </x-nav-link>
+            @endcan
+        </div>
+    </div>
+
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden md:hidden">
         <div class="pt-2 pb-3 space-y-1">
@@ -117,7 +123,7 @@
 
             @can('viewAny', \App\Models\RecordRequest::class)
                 <x-responsive-nav-link :href="route('requests.cancellations')" :active="request()->routeIs('requests.cancellations')">
-                    {{ __('Cancellation requests') }}
+                    {{ __('Cancellation Requests') }}
                     @if ($pendingCancellationsCount > 0)
                         <span class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">
                             {{ $pendingCancellationsCount > 9 ? '9+' : $pendingCancellationsCount }}
@@ -126,11 +132,15 @@
                 </x-responsive-nav-link>
 
                 <x-responsive-nav-link :href="route('requests.index')" :active="request()->routeIs('requests.index') || request()->routeIs('requests.show')">
-                    {{ __('Student requests') }}
+                    {{ __('Student Requests') }}
                     @if ($pendingRequestsCount > 0)
-                        <span class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">
-                            {{ $pendingRequestsCount > 9 ? '9+' : $pendingRequestsCount }}
-                        </span>
+                        <span
+                            x-data="{ count: {{ $pendingRequestsCount }} }"
+                            x-on:request-badges-updated.window="count = $event.detail.pending"
+                            x-show="count > 0"
+                            x-text="count > 9 ? '9+' : count"
+                            class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white"
+                        >{{ $pendingRequestsCount > 9 ? '9+' : $pendingRequestsCount }}</span>
                     @endif
                 </x-responsive-nav-link>
             @endcan

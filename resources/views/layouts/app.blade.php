@@ -16,22 +16,26 @@
         @livewireStyles
     </head>
     <body class="font-sans text-gray-900 antialiased">
-        <div class="min-h-screen bg-gray-100">
+        <div class="flex min-h-screen flex-col bg-gradient-to-b from-indigo-50 to-gray-50">
             @include('layouts.navigation')
 
             <!-- Page Heading -->
             @isset($header)
-                <header class="bg-white shadow">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                <header>
+                    <div class="max-w-7xl mx-auto px-4 pt-8 sm:px-6 lg:px-8">
                         {{ $header }}
                     </div>
                 </header>
             @endisset
 
             <!-- Page Content -->
-            <main>
+            <main class="flex-1">
                 {{ $slot }}
             </main>
+
+            <footer class="border-t border-gray-200 bg-white py-6">
+                <p class="text-center text-sm text-gray-500">&copy; {{ date('Y') }} {{ config('app.name', 'DocuQuest') }}. {{ __('All rights reserved.') }}</p>
+            </footer>
         </div>
     @livewireScripts
     </body>

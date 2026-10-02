@@ -13,21 +13,12 @@
                         <h1 class="mt-1 text-2xl font-bold tracking-tight text-gray-900">{{ __('Welcome back, :name', ['name' => $firstName]) }}</h1>
                         <p class="mt-2 inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">{{ Auth::user()->role->label() }}</p>
                     </div>
-
-                    @isset($actionableRequests)
-                        <div class="flex flex-col gap-3 sm:flex-row">
-                            <a wire:navigate.hover href="{{ route('requests.index') }}" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">{{ __('Student requests') }}</a>
-                            <a wire:navigate.hover href="{{ route('requests.cancellations') }}" class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">{{ __('Cancellation requests') }}</a>
-                        </div>
-                    @endisset
                 </div>
             </section>
 
             @isset($actionableRequests)
-                {{-- At a glance --}}
-                <section aria-labelledby="at-a-glance">
-                    <h2 id="at-a-glance" class="mb-3 text-base font-semibold text-gray-900">{{ __('At a glance') }}</h2>
-
+                {{-- Request counts --}}
+                <section aria-label="{{ __('Request counts') }}">
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                         @foreach ([
                             ['Pending', 'Waiting for approval', $counts['pending'] ?? 0, route('requests.index', ['status' => 'pending']), 'amber', 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'],
@@ -65,11 +56,8 @@
                         <div>
                             <div class="flex items-center gap-3">
                                 <h2 id="needs-action" class="text-base font-semibold text-gray-900">{{ __('Requests needing action') }}</h2>
-                                @if ($actionableCount > 0)
-                                    <span class="inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white">{{ $actionableCount }}</span>
-                                @endif
                             </div>
-                            <p class="mt-1 text-sm text-gray-600">{{ __('The oldest are at the top, so you can work from the top down.') }}</p>
+                            <p class="mt-1 text-sm text-gray-600">{{ __('First come, first served.') }}</p>
                         </div>
 
                         <a wire:navigate.hover href="{{ route('requests.index') }}" class="inline-flex items-center gap-2 rounded-lg bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-200 transition hover:bg-indigo-600 hover:text-white hover:ring-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">

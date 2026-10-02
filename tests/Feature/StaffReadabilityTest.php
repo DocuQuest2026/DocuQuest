@@ -22,12 +22,12 @@ test('the dashboard uses plain words for what each count means', function () {
 
     $this->actingAs($staff)->get(route('dashboard'))
         ->assertOk()
-        ->assertSee('At a glance')
+        ->assertDontSee('At a glance')
         ->assertSee('Waiting for approval')
         ->assertSee('Ready to release')
         ->assertSee('Students asking to cancel')
         ->assertSee('Ready for pickup')
-        ->assertSee('The oldest are at the top, so you can work from the top down.');
+        ->assertSee('First come, first served.');
 });
 
 test('each request on the dashboard has one large, clearly labelled button to open it', function () {
@@ -59,6 +59,6 @@ test('the dashboard keeps its detail text readable: no faint gray and no tiny ty
 test('the full navigation appears from tablet width, with a menu button on phones', function () {
     $this->actingAs(User::factory()->staff()->create())->get(route('dashboard'))
         ->assertOk()
-        ->assertSeeHtml('hidden items-center gap-1 md:flex')
+        ->assertSeeHtml('hidden border-t border-gray-100 md:block')
         ->assertSeeHtml('aria-label="Menu"');
 });

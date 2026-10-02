@@ -9,8 +9,10 @@ use App\Mail\RecordRequestCancellationConfirmed;
 use App\Mail\RecordRequestRejected;
 use App\Models\RecordRequest;
 use App\Services\AuditLogger;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
@@ -42,14 +44,39 @@ class StudentRequestController extends Controller
         Gate::authorize('viewAny', RecordRequest::class);
 
         $showingCancelled = $request->query('status') === 'cancelled';
+        $dateColumn = $showingCancelled ? 'cancelled_at' : 'cancellation_requested_at';
+
+        $search = trim((string) $request->query('search'));
+        $isDefaultView = ! $request->has('month') && ! $request->has('day');
+        $requestedMonth = $request->has('month') ? (string) $request->query('month') : now()->format('Y-m');
+        $month = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $requestedMonth) ? $requestedMonth : '';
+        $firstOfMonth = $month !== '' ? Carbon::createFromFormat('!Y-m', $month) : null;
+        $requestedDay = $isDefaultView ? now()->format('d') : (string) $request->query('day');
+        $day = $firstOfMonth && preg_match('/^\d{2}$/', $requestedDay) && (int) $requestedDay >= 1 && (int) $requestedDay <= $firstOfMonth->daysInMonth
+            ? $requestedDay
+            : '';
+
+        $query = RecordRequest::query()
+            ->where('status', $showingCancelled ? RequestStatus::Cancelled : RequestStatus::CancellationRequested)
+            ->search($search)
+            ->when($firstOfMonth !== null, function (Builder $query) use ($firstOfMonth, $day, $dateColumn): void {
+                $start = $day !== '' ? $firstOfMonth->copy()->day((int) $day) : $firstOfMonth->copy();
+                $end = $day !== '' ? $start->copy()->endOfDay() : $start->copy()->endOfMonth();
+
+                $query->whereBetween($dateColumn, [$start, $end]);
+            });
 
         $recordRequests = $showingCancelled
-            ? RecordRequest::where('status', RequestStatus::Cancelled)->latest('cancelled_at')->paginate(15)
-            : RecordRequest::where('status', RequestStatus::CancellationRequested)->oldest()->orderBy('id')->paginate(15);
+            ? $query->latest('cancelled_at')->paginate(15)
+            : $query->oldest()->orderBy('id')->paginate(15);
 
         return view('staff.requests.cancellations', [
             'recordRequests' => $recordRequests->withQueryString(),
             'showingCancelled' => $showingCancelled,
+            'search' => $search,
+            'month' => $month,
+            'day' => $day,
+            'daysOfMonth' => $firstOfMonth ? range(1, $firstOfMonth->daysInMonth) : [],
         ]);
     }
 
