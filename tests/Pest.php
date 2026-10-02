@@ -68,8 +68,7 @@ function validRecordRequest(array $overrides = []): array
         'enrolment_status' => EnrolmentStatus::Alumni->value,
         'email' => 'maria.cruz@gmail.com',
         'contact_no' => '09171234567',
-        'document_type' => DocumentType::TranscriptOfRecords->value,
-        'copies' => 2,
+        'documents' => [DocumentType::TranscriptOfRecords->value => ['copies' => 2]],
         'purpose' => 'Employment',
         ...$overrides,
     ];

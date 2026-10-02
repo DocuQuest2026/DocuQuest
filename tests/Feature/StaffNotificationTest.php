@@ -4,14 +4,15 @@ use App\Models\RecordRequest;
 use App\Models\User;
 use App\Notifications\RecordRequestCancellationRequested;
 
-test('a staff member can view a recent notification in the navigation', function () {
+test('the navigation no longer shows a notification bell', function () {
     $staff = User::factory()->staff()->create();
     $recordRequest = RecordRequest::factory()->create();
     $staff->notify(new RecordRequestCancellationRequested($recordRequest));
 
     $this->actingAs($staff)->get(route('dashboard'))
         ->assertOk()
-        ->assertSee($recordRequest->reference_no);
+        ->assertDontSee('Notifications')
+        ->assertDontSee('Mark all read');
 });
 
 test('opening a notification marks it read and redirects to the request', function () {

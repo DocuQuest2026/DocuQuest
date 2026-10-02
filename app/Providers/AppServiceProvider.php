@@ -3,14 +3,11 @@
 namespace App\Providers;
 
 use App\Enums\RequestStatus;
+use App\Models\DocumentRelease;
 use App\Models\RecordRequest;
-use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
-use Illuminate\Notifications\DatabaseNotification;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
@@ -18,10 +15,6 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    private const NAVIGATION_COUNTS_CACHE_KEY = 'navigation.request-counts';
-
-    private const NAVIGATION_CACHE_SECONDS = 60;
-
     /**
      * Register any application services.
      */
@@ -40,62 +33,32 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Load the navigation badges and notifications once per request. Every query is a round trip
-     * to the remote database, so the results are cached briefly and forgotten as soon as the
-     * underlying requests or notifications change.
+     * Load the navigation badges once per request. Every query is a round trip to the remote
+     * database, so the counts are cached briefly and forgotten as soon as the underlying
+     * requests change.
      */
     protected function shareNavigationData(): void
     {
         foreach (['saved', 'deleted', 'restored', 'forceDeleted'] as $event) {
-            RecordRequest::$event(fn () => Cache::forget(self::NAVIGATION_COUNTS_CACHE_KEY));
+            RecordRequest::$event(fn () => RecordRequest::forgetBadgeCounts());
         }
 
         foreach (['saved', 'deleted'] as $event) {
-            DatabaseNotification::$event(
-                fn (DatabaseNotification $notification) => Cache::forget(self::navigationNotificationsCacheKey($notification->notifiable_id))
-            );
+            DocumentRelease::$event(fn () => RecordRequest::forgetBadgeCounts());
         }
 
         View::composer('layouts.navigation', function ($view): void {
             $user = Auth::user();
 
             $statusCounts = Gate::forUser($user)->allows('viewAny', RecordRequest::class)
-                ? Cache::remember(self::NAVIGATION_COUNTS_CACHE_KEY, self::NAVIGATION_CACHE_SECONDS, fn (): array => RecordRequest::query()
-                    ->whereIn('status', [RequestStatus::CancellationRequested, RequestStatus::Pending])
-                    ->selectRaw('status, count(*) as total')
-                    ->groupBy('status')
-                    ->pluck('total', 'status')
-                    ->all())
+                ? RecordRequest::badgeCounts()
                 : [];
-
-            $notifications = $user instanceof User && $user->isOfficeUser()
-                ? Cache::remember(self::navigationNotificationsCacheKey($user->getKey()), self::NAVIGATION_CACHE_SECONDS, fn (): array => [
-                    'unread' => $user->unreadNotifications()->count(),
-                    'recent' => $user->notifications()->latest()->limit(10)->get()
-                        ->map(fn (DatabaseNotification $notification): array => [
-                            'id' => $notification->id,
-                            'read_at' => $notification->read_at?->toIso8601String(),
-                            'data' => $notification->data,
-                            'created_at' => $notification->created_at->toIso8601String(),
-                        ])->all(),
-                ])
-                : ['unread' => 0, 'recent' => []];
 
             $view->with([
                 'pendingCancellationsCount' => (int) ($statusCounts[RequestStatus::CancellationRequested->value] ?? 0),
                 'pendingRequestsCount' => (int) ($statusCounts[RequestStatus::Pending->value] ?? 0),
-                'unreadNotifications' => $notifications['unread'],
-                'recentNotifications' => collect($notifications['recent'])->map(fn (array $notification): object => (object) [
-                    ...$notification,
-                    'created_at' => Carbon::parse($notification['created_at']),
-                ]),
             ]);
         });
-    }
-
-    protected static function navigationNotificationsCacheKey(int|string|null $userId): string
-    {
-        return "navigation.notifications.{$userId}";
     }
 
     /**

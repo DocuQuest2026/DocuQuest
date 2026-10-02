@@ -26,7 +26,14 @@ class DashboardController extends Controller
             return view('dashboard');
         }
 
-        $actionableCount = RecordRequest::query()->whereIn('status', self::ACTIONABLE_STATUSES)->count();
+        // The counts are cached and cleared whenever a request changes, so showing them costs
+        // no extra database round trip.
+        $counts = RecordRequest::badgeCounts();
+
+        $actionableCount = array_sum(array_map(
+            fn (RequestStatus $status): int => $counts[$status->value] ?? 0,
+            self::ACTIONABLE_STATUSES,
+        ));
 
         $actionableRequests = RecordRequest::query()
             ->whereIn('status', self::ACTIONABLE_STATUSES)
@@ -37,6 +44,7 @@ class DashboardController extends Controller
         return view('dashboard', [
             'actionableRequests' => $actionableRequests,
             'actionableCount' => $actionableCount,
+            'counts' => $counts,
         ]);
     }
 }

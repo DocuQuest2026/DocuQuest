@@ -18,75 +18,18 @@ use Throwable;
 
 class StudentRequestController extends Controller
 {
-    /**
-     * Statuses shown as their own filter tab on the requests list, alongside "All".
-     *
-     * @var array<int, RequestStatus>
-     */
-    private const FILTERABLE_STATUSES = [
-        RequestStatus::Pending,
-        RequestStatus::Approved,
-        RequestStatus::Released,
-        RequestStatus::Rejected,
-    ];
-
     public function __construct(private AuditLogger $audit) {}
 
     /**
-     * List the submitted student record requests in first-come, first-served order (the
-     * oldest request at the top), optionally filtered by status. The "Archived" tab shows
-     * archived (soft-deleted) requests, and the "Claimed" tab shows released documents that have
-     * actually been picked up (a released request can be filtered either way).
+     * Show the submitted student record requests. The list itself (first-come, first-served
+     * order, status tabs, search, archived and claimed views) lives in the `request-list`
+     * Livewire component so it can update as staff type.
      */
-    public function index(Request $request): View
+    public function index(): View
     {
         Gate::authorize('viewAny', RecordRequest::class);
 
-        $statusParam = (string) $request->query('status');
-        $showingArchived = $statusParam === 'archived';
-        $showingClaimed = $statusParam === 'claimed';
-
-        if ($showingArchived) {
-            $recordRequests = RecordRequest::onlyTrashed()
-                ->latest('deleted_at')
-                ->paginate(15)
-                ->withQueryString();
-            $statusFilter = null;
-        } elseif ($showingClaimed) {
-            $recordRequests = RecordRequest::where('status', RequestStatus::Released)
-                ->whereHas('release', fn ($query) => $query->whereNotNull('claimed_at'))
-                ->with('release')
-                ->oldest()
-                ->orderBy('id')
-                ->paginate(15)
-                ->withQueryString();
-            $statusFilter = null;
-        } else {
-            $statusFilter = RequestStatus::tryFrom($statusParam);
-            $statusFilter = in_array($statusFilter, self::FILTERABLE_STATUSES, true) ? $statusFilter : null;
-
-            $recordRequests = RecordRequest::query()
-                ->when($statusFilter, fn ($query) => $query->where('status', $statusFilter))
-                // Once claimed, a request moves out of the "Released" tab and into "Claimed"
-                // instead of sitting in both, so the tab only shows documents still awaiting pickup.
-                ->when(
-                    $statusFilter === RequestStatus::Released,
-                    fn ($query) => $query->whereDoesntHave('release', fn ($q) => $q->whereNotNull('claimed_at'))
-                )
-                ->with('release')
-                ->oldest()
-                ->orderBy('id')
-                ->paginate(15)
-                ->withQueryString();
-        }
-
-        return view('staff.requests.index', [
-            'recordRequests' => $recordRequests,
-            'statusFilter' => $statusFilter,
-            'showingArchived' => $showingArchived,
-            'showingClaimed' => $showingClaimed,
-            'filterableStatuses' => self::FILTERABLE_STATUSES,
-        ]);
+        return view('staff.requests.index');
     }
 
     /**

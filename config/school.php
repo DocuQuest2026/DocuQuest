@@ -43,6 +43,31 @@ return [
     |
     */
 
-    'cancellation_window_days' => 3,
+    'cancellation_window_days' => 1,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Processing Time
+    |--------------------------------------------------------------------------
+    |
+    | The most days the registrar needs to process a request, depending on the
+    | document requested. This is only shown to requesters as guidance.
+    |
+    */
+
+    'processing_days' => 3,
+
+    /*
+    |--------------------------------------------------------------------------
+    | First Request Month
+    |--------------------------------------------------------------------------
+    |
+    | The first month (as YYYY-MM) the system was in use. The month filter on the
+    | staff requests list can not go earlier than this, since no requests exist
+    | before it.
+    |
+    */
+
+    'first_request_month' => '2026-01',
 
 ];

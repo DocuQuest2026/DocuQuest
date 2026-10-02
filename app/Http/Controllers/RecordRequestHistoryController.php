@@ -30,6 +30,8 @@ class RecordRequestHistoryController extends Controller
         $verifiedEmail = $this->verifiedEmail();
 
         return view('record-requests.history', [
+            'codeMinutes' => self::CODE_MINUTES,
+            'accessMinutes' => self::ACCESS_MINUTES,
             'pendingEmail' => session('history_pending_email'),
             'verifiedEmail' => $verifiedEmail,
             'recordRequests' => $verifiedEmail
