@@ -11,7 +11,7 @@
                 @php
                     $isActive = $statusFilter === null;
                 @endphp
-                <a
+                <a wire:navigate.hover
                     href="{{ route('requests.index') }}"
                     class="rounded-md px-3 py-1.5 text-sm font-medium {{ $isActive ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }} shadow-sm"
                 >
@@ -21,7 +21,7 @@
                     @php
                         $isActive = $statusFilter === $status;
                     @endphp
-                    <a
+                    <a wire:navigate.hover
                         href="{{ route('requests.index', ['status' => $status->value]) }}"
                         class="rounded-md px-3 py-1.5 text-sm font-medium {{ $isActive ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }} shadow-sm"
                     >
@@ -29,7 +29,7 @@
                     </a>
 
                     @if ($status === \App\Enums\RequestStatus::Released)
-                        <a
+                        <a wire:navigate.hover
                             href="{{ route('requests.index', ['status' => 'claimed']) }}"
                             class="rounded-md px-3 py-1.5 text-sm font-medium {{ $showingClaimed ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }} shadow-sm"
                         >
@@ -38,11 +38,11 @@
                     @endif
                 @endforeach
 
-                <a
-                    href="{{ route('requests.index', ['status' => 'deleted']) }}"
-                    class="rounded-md px-3 py-1.5 text-sm font-medium {{ $showingDeleted ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }} shadow-sm"
+                <a wire:navigate.hover
+                    href="{{ route('requests.index', ['status' => 'archived']) }}"
+                    class="rounded-md px-3 py-1.5 text-sm font-medium {{ $showingArchived ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }} shadow-sm"
                 >
-                    {{ __('Deleted') }}
+                    {{ __('Archived') }}
                 </a>
             </div>
 
@@ -55,7 +55,7 @@
                             <th scope="col" class="px-4 py-3 font-medium">{{ __('Document') }}</th>
                             <th scope="col" class="px-4 py-3 font-medium">{{ __('Copies') }}</th>
                             <th scope="col" class="px-4 py-3 font-medium">
-                                {{ $showingDeleted ? __('Deleted') : ($showingClaimed ? __('Claimed') : __('Submitted')) }}
+                                {{ $showingArchived ? __('Archived') : ($showingClaimed ? __('Claimed') : __('Submitted')) }}
                             </th>
                             <th scope="col" class="px-4 py-3 font-medium">{{ __('Status') }}</th>
                             <th scope="col" class="px-4 py-3"><span class="sr-only">{{ __('Actions') }}</span></th>
@@ -83,7 +83,7 @@
                                 <td class="px-4 py-3 text-gray-600">{{ $recordRequest->copies }}</td>
                                 <td class="px-4 py-3 text-gray-600">
                                     @php
-                                        $dateColumn = $showingDeleted
+                                        $dateColumn = $showingArchived
                                             ? $recordRequest->deleted_at
                                             : ($showingClaimed ? $recordRequest->release->claimed_at : $recordRequest->created_at);
                                     @endphp
@@ -93,7 +93,7 @@
                                     <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium {{ $statusColors[$recordRequest->status->value] }}">{{ $recordRequest->status->label() }}</span>
                                 </td>
                                 <td class="px-4 py-3 text-right space-x-3 whitespace-nowrap">
-                                    <a href="{{ route('requests.show', $recordRequest) }}" class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">{{ __('View') }}</a>
+                                    <a wire:navigate.hover href="{{ route('requests.show', $recordRequest) }}" class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">{{ __('View') }}</a>
 
                                     @can('claim', $recordRequest)
                                         <button
@@ -149,8 +149,8 @@
                         @empty
                             <tr>
                                 <td colspan="7" class="px-4 py-8 text-center text-gray-500">
-                                    @if ($showingDeleted)
-                                        {{ __('No deleted requests.') }}
+                                    @if ($showingArchived)
+                                        {{ __('No archived requests.') }}
                                     @elseif ($showingClaimed)
                                         {{ __('No claimed documents yet.') }}
                                     @else

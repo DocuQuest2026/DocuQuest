@@ -30,6 +30,11 @@
             </x-primary-button>
         </form>
 
+        <p class="mt-4 text-center text-sm text-gray-600">
+            {{ __('Lost your reference number?') }}
+            <a href="{{ route('record-requests.history.create') }}" class="font-medium text-indigo-600 underline hover:text-indigo-800">{{ __('View all your requests by email') }}</a>
+        </p>
+
         @if ($recordRequest)
             @php
                 $statusCopy = [

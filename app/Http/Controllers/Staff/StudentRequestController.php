@@ -34,8 +34,8 @@ class StudentRequestController extends Controller
 
     /**
      * List the submitted student record requests in first-come, first-served order (the
-     * oldest request at the top), optionally filtered by status. The "Deleted" tab shows
-     * soft-deleted requests, and the "Claimed" tab shows released documents that have
+     * oldest request at the top), optionally filtered by status. The "Archived" tab shows
+     * archived (soft-deleted) requests, and the "Claimed" tab shows released documents that have
      * actually been picked up (a released request can be filtered either way).
      */
     public function index(Request $request): View
@@ -43,10 +43,10 @@ class StudentRequestController extends Controller
         Gate::authorize('viewAny', RecordRequest::class);
 
         $statusParam = (string) $request->query('status');
-        $showingDeleted = $statusParam === 'deleted';
+        $showingArchived = $statusParam === 'archived';
         $showingClaimed = $statusParam === 'claimed';
 
-        if ($showingDeleted) {
+        if ($showingArchived) {
             $recordRequests = RecordRequest::onlyTrashed()
                 ->latest('deleted_at')
                 ->paginate(15)
@@ -83,7 +83,7 @@ class StudentRequestController extends Controller
         return view('staff.requests.index', [
             'recordRequests' => $recordRequests,
             'statusFilter' => $statusFilter,
-            'showingDeleted' => $showingDeleted,
+            'showingArchived' => $showingArchived,
             'showingClaimed' => $showingClaimed,
             'filterableStatuses' => self::FILTERABLE_STATUSES,
         ]);
@@ -111,7 +111,7 @@ class StudentRequestController extends Controller
     }
 
     /**
-     * Show a single student record request, including a deleted one.
+     * Show a single student record request, including an archived one.
      */
     public function show(RecordRequest $recordRequest): View
     {
@@ -120,6 +120,19 @@ class StudentRequestController extends Controller
         return view('staff.requests.show', [
             'recordRequest' => $recordRequest->load('release'),
         ]);
+    }
+
+    /**
+     * Reveal the requester's full email on the details page for this one page load, and
+     * record who looked.
+     */
+    public function revealEmail(RecordRequest $recordRequest): RedirectResponse
+    {
+        Gate::authorize('revealEmail', $recordRequest);
+
+        $this->audit->log(auth()->user(), 'request.email_revealed', $recordRequest);
+
+        return redirect()->route('requests.show', $recordRequest)->with('revealed_email', true);
     }
 
     /**
@@ -189,20 +202,20 @@ class StudentRequestController extends Controller
     }
 
     /**
-     * Soft delete the request. The record and its audit trail are kept.
+     * Archive (soft delete) the request. The record and its audit trail are kept.
      */
     public function destroy(RecordRequest $recordRequest): RedirectResponse
     {
         Gate::authorize('delete', $recordRequest);
 
-        $this->audit->log(auth()->user(), 'request.deleted', $recordRequest);
+        $this->audit->log(auth()->user(), 'request.archived', $recordRequest);
         $recordRequest->delete();
 
-        return redirect()->route('requests.index')->with('status', __('Request deleted.'));
+        return redirect()->route('requests.index')->with('status', __('Request archived.'));
     }
 
     /**
-     * Recover a previously deleted request.
+     * Recover a previously archived request.
      */
     public function restore(RecordRequest $recordRequest): RedirectResponse
     {

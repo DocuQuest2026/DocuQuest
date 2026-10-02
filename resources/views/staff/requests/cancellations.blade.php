@@ -14,13 +14,13 @@
             @endif
 
             <div class="flex flex-wrap gap-2">
-                <a
+                <a wire:navigate.hover
                     href="{{ route('requests.cancellations') }}"
                     class="rounded-md px-3 py-1.5 text-sm font-medium {{ ! $showingCancelled ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }} shadow-sm"
                 >
                     {{ __('Pending') }}
                 </a>
-                <a
+                <a wire:navigate.hover
                     href="{{ route('requests.cancellations', ['status' => 'cancelled']) }}"
                     class="rounded-md px-3 py-1.5 text-sm font-medium {{ $showingCancelled ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }} shadow-sm"
                 >
@@ -54,7 +54,7 @@
                                     {{ ($showingCancelled ? $recordRequest->cancelled_at : $recordRequest->cancellation_requested_at)->format('M j, Y g:i A') }}
                                 </td>
                                 <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
-                                    <a href="{{ route('requests.show', $recordRequest) }}" class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">{{ __('View') }}</a>
+                                    <a wire:navigate.hover href="{{ route('requests.show', $recordRequest) }}" class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">{{ __('View') }}</a>
 
                                     @can('confirmCancellation', $recordRequest)
                                         <form method="POST" action="{{ route('requests.confirm-cancellation', $recordRequest) }}" class="inline" onsubmit="return confirm('{{ __('Confirm this cancellation? This cannot be undone.') }}');">

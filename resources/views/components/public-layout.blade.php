@@ -13,6 +13,7 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @livewireStyles
     </head>
     <body class="font-sans text-gray-900 antialiased">
         <div class="flex min-h-screen flex-col bg-gray-50">
@@ -24,7 +25,7 @@
                     </a>
 
                     <a href="{{ route('record-requests.status.create') }}" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        {{ __('Request Status') }}
+                        {{ __('Check Status') }}
                     </a>
                 </div>
             </header>
@@ -37,5 +38,6 @@
                 <p class="text-center text-sm text-gray-500">&copy; {{ date('Y') }} {{ config('app.name', 'DocuQuest') }}. {{ __('All rights reserved.') }}</p>
             </footer>
         </div>
+    @livewireScripts
     </body>
 </html>

@@ -18,7 +18,7 @@
                 <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden">
                     <div class="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100">
                         <h3 class="font-semibold text-gray-900">{{ __('Requests needing action') }}</h3>
-                        <a href="{{ route('requests.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800 underline">{{ __('View all requests') }}</a>
+                        <a wire:navigate.hover href="{{ route('requests.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800 underline">{{ __('View all requests') }}</a>
                     </div>
 
                     @if ($actionableRequests->isEmpty())
@@ -59,7 +59,7 @@
                                                 </span>
                                             </td>
                                             <td class="px-4 py-3 text-right">
-                                                <a href="{{ route('requests.show', $recordRequest) }}" class="text-indigo-600 hover:text-indigo-800 underline">{{ __('View') }}</a>
+                                                <a wire:navigate.hover href="{{ route('requests.show', $recordRequest) }}" class="text-indigo-600 hover:text-indigo-800 underline">{{ __('View') }}</a>
                                             </td>
                                         </tr>
                                     @endforeach

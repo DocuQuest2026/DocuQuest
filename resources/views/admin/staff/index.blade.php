@@ -5,7 +5,7 @@
                 {{ __('Staff accounts') }}
             </h2>
 
-            <a href="{{ route('admin.staff.create') }}">
+            <a wire:navigate.hover href="{{ route('admin.staff.create') }}">
                 <x-primary-button type="button">{{ __('Add account') }}</x-primary-button>
             </a>
         </div>
@@ -26,13 +26,13 @@
             @endif
 
             <div class="flex flex-wrap gap-2">
-                <a
+                <a wire:navigate.hover
                     href="{{ route('admin.staff.index') }}"
                     class="rounded-md px-3 py-1.5 text-sm font-medium {{ ! $showingDeleted ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }} shadow-sm"
                 >
                     {{ __('Active accounts') }}
                 </a>
-                <a
+                <a wire:navigate.hover
                     href="{{ route('admin.staff.index', ['deleted' => 1]) }}"
                     class="rounded-md px-3 py-1.5 text-sm font-medium {{ $showingDeleted ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }} shadow-sm"
                 >
@@ -118,7 +118,7 @@
                                             </x-modal>
                                         @endcan
                                     @else
-                                        <a href="{{ route('admin.staff.edit', $account) }}" class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">{{ __('Edit') }}</a>
+                                        <a wire:navigate.hover href="{{ route('admin.staff.edit', $account) }}" class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">{{ __('Edit') }}</a>
                                     @endif
                                 </td>
                             </tr>

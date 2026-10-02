@@ -52,7 +52,7 @@
 
                     <div class="flex items-center gap-4">
                         <x-primary-button>{{ __('Create account') }}</x-primary-button>
-                        <a href="{{ route('admin.staff.index') }}" class="text-sm text-gray-600 underline hover:text-gray-900">{{ __('Cancel') }}</a>
+                        <a wire:navigate.hover href="{{ route('admin.staff.index') }}" class="text-sm text-gray-600 underline hover:text-gray-900">{{ __('Cancel') }}</a>
                     </div>
                 </form>
             </div>

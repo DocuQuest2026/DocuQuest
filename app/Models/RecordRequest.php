@@ -193,6 +193,17 @@ class RecordRequest extends Model
     }
 
     /**
+     * The requester's email with most of the address hidden (e.g. j***@gmail.com). The
+     * mask has a fixed length so it does not reveal how long the address is.
+     */
+    public function maskedEmail(): string
+    {
+        [$local, $domain] = array_pad(explode('@', $this->email, 2), 2, '');
+
+        return mb_substr($local, 0, 1).'***@'.$domain;
+    }
+
+    /**
      * The requester's full name as it should appear on the document.
      */
     public function fullName(): string

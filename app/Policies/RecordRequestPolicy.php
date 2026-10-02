@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\RequestStatus;
 use App\Models\RecordRequest;
 use App\Models\User;
 
@@ -36,6 +37,15 @@ class RecordRequestPolicy
     }
 
     /**
+     * Registrar staff and administrators can reveal the requester's full email address. The
+     * address is masked by default, and every reveal is audited.
+     */
+    public function revealEmail(User $user, RecordRequest $recordRequest): bool
+    {
+        return $user->isOfficeUser();
+    }
+
+    /**
      * Registrar staff and administrators can record that a released document was actually
      * picked up.
      */
@@ -55,16 +65,18 @@ class RecordRequestPolicy
     }
 
     /**
-     * Registrar staff and administrators can delete a request, in any status, to declutter
-     * the list. Deletion is a soft delete: the record and its audit trail are kept.
+     * Registrar staff and administrators can archive a request to declutter
+     * the list, except while it is still pending or approved and needs action. Archiving is a
+     * soft delete: the record and its audit trail are kept.
      */
     public function delete(User $user, RecordRequest $recordRequest): bool
     {
-        return $user->isOfficeUser();
+        return $user->isOfficeUser()
+            && ! in_array($recordRequest->status, [RequestStatus::Pending, RequestStatus::Approved], true);
     }
 
     /**
-     * Registrar staff and administrators can recover a request they previously deleted.
+     * Registrar staff and administrators can recover a request they previously archived.
      */
     public function restore(User $user, RecordRequest $recordRequest): bool
     {

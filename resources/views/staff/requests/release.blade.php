@@ -39,7 +39,7 @@
 
                     <div class="flex items-center gap-4">
                         <x-primary-button>{{ __('Release document') }}</x-primary-button>
-                        <a href="{{ route('requests.show', $recordRequest) }}" class="text-sm text-gray-600 underline hover:text-gray-900">{{ __('Cancel') }}</a>
+                        <a wire:navigate.hover href="{{ route('requests.show', $recordRequest) }}" class="text-sm text-gray-600 underline hover:text-gray-900">{{ __('Cancel') }}</a>
                     </div>
                 </form>
             </div>

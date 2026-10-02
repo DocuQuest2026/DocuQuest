@@ -17,11 +17,6 @@
                     </x-nav-link>
 
                     @can('viewAny', \App\Models\RecordRequest::class)
-                        @php
-                            $pendingCancellationsCount = \App\Models\RecordRequest::where('status', \App\Enums\RequestStatus::CancellationRequested)->count();
-                            $pendingRequestsCount = \App\Models\RecordRequest::where('status', \App\Enums\RequestStatus::Pending)->count();
-                        @endphp
-
                         <x-nav-link :href="route('requests.cancellations')" :active="request()->routeIs('requests.cancellations')">
                             {{ __('Cancellation requests') }}
                             @if ($pendingCancellationsCount > 0)
@@ -52,11 +47,6 @@
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6 sm:gap-3">
                 @if (Auth::user()->isOfficeUser())
-                    @php
-                        $unreadNotifications = Auth::user()->unreadNotifications()->count();
-                        $recentNotifications = Auth::user()->notifications()->latest()->limit(10)->get();
-                    @endphp
-
                     <x-dropdown align="right" width="w-80">
                         <x-slot name="trigger">
                             <button class="relative inline-flex items-center p-2 rounded-md text-gray-500 hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
@@ -86,7 +76,7 @@
 
                             <div class="max-h-80 overflow-y-auto">
                                 @forelse ($recentNotifications as $notification)
-                                    <form method="POST" action="{{ route('notifications.read', $notification) }}">
+                                    <form method="POST" action="{{ route('notifications.read', $notification->id) }}">
                                         @csrf
                                         <button type="submit" class="block w-full text-left px-4 py-3 text-sm hover:bg-gray-100 {{ $notification->read_at ? 'text-gray-500' : 'text-gray-900 font-medium bg-indigo-50' }}">
                                             {{ __(':name asked to cancel :reference', ['name' => $notification->data['student_name'], 'reference' => $notification->data['reference_no']]) }}
@@ -153,25 +143,20 @@
             </x-responsive-nav-link>
 
             @can('viewAny', \App\Models\RecordRequest::class)
-                @php
-                    $pendingCancellationsCountMobile = \App\Models\RecordRequest::where('status', \App\Enums\RequestStatus::CancellationRequested)->count();
-                    $pendingRequestsCountMobile = \App\Models\RecordRequest::where('status', \App\Enums\RequestStatus::Pending)->count();
-                @endphp
-
                 <x-responsive-nav-link :href="route('requests.cancellations')" :active="request()->routeIs('requests.cancellations')">
                     {{ __('Cancellation requests') }}
-                    @if ($pendingCancellationsCountMobile > 0)
+                    @if ($pendingCancellationsCount > 0)
                         <span class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">
-                            {{ $pendingCancellationsCountMobile > 9 ? '9+' : $pendingCancellationsCountMobile }}
+                            {{ $pendingCancellationsCount > 9 ? '9+' : $pendingCancellationsCount }}
                         </span>
                     @endif
                 </x-responsive-nav-link>
 
                 <x-responsive-nav-link :href="route('requests.index')" :active="request()->routeIs('requests.index') || request()->routeIs('requests.show')">
                     {{ __('Student requests') }}
-                    @if ($pendingRequestsCountMobile > 0)
+                    @if ($pendingRequestsCount > 0)
                         <span class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">
-                            {{ $pendingRequestsCountMobile > 9 ? '9+' : $pendingRequestsCountMobile }}
+                            {{ $pendingRequestsCount > 9 ? '9+' : $pendingRequestsCount }}
                         </span>
                     @endif
                 </x-responsive-nav-link>
@@ -185,23 +170,18 @@
         </div>
 
         @if (Auth::user()->isOfficeUser())
-            @php
-                $unreadNotificationsMobile = Auth::user()->unreadNotifications()->count();
-                $recentNotificationsMobile = Auth::user()->notifications()->latest()->limit(10)->get();
-            @endphp
-
             <div class="pt-4 pb-1 border-t border-gray-200">
                 <div class="flex items-center justify-between px-4">
                     <span class="font-medium text-base text-gray-800">
                         {{ __('Notifications') }}
-                        @if ($unreadNotificationsMobile > 0)
+                        @if ($unreadNotifications > 0)
                             <span class="ms-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-600 text-[10px] font-semibold text-white">
-                                {{ $unreadNotificationsMobile > 9 ? '9+' : $unreadNotificationsMobile }}
+                                {{ $unreadNotifications > 9 ? '9+' : $unreadNotifications }}
                             </span>
                         @endif
                     </span>
 
-                    @if ($unreadNotificationsMobile > 0)
+                    @if ($unreadNotifications > 0)
                         <form method="POST" action="{{ route('notifications.read-all') }}">
                             @csrf
                             <button type="submit" class="text-xs text-indigo-600 hover:text-indigo-800 underline">{{ __('Mark all read') }}</button>
@@ -210,8 +190,8 @@
                 </div>
 
                 <div class="mt-3 space-y-1">
-                    @forelse ($recentNotificationsMobile as $notification)
-                        <form method="POST" action="{{ route('notifications.read', $notification) }}">
+                    @forelse ($recentNotifications as $notification)
+                        <form method="POST" action="{{ route('notifications.read', $notification->id) }}">
                             @csrf
                             <button type="submit" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 {{ $notification->read_at ? 'text-gray-500' : 'text-gray-900 font-medium' }}">
                                 {{ __(':name asked to cancel :reference', ['name' => $notification->data['student_name'], 'reference' => $notification->data['reference_no']]) }}

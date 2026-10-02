@@ -16,7 +16,8 @@ test('staff and administrators can list and view student requests', function (st
     $this->actingAs($office)->get(route('requests.show', $recordRequest))
         ->assertOk()
         ->assertSee($recordRequest->purpose)
-        ->assertSee($recordRequest->email);
+        ->assertSee($recordRequest->maskedEmail())
+        ->assertDontSee($recordRequest->email);
 })->with(['staff', 'admin']);
 
 test('staff can filter student requests by status', function () {

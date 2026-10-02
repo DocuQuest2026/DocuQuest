@@ -5,7 +5,7 @@ use App\Models\RecordRequest;
 test('the landing page links to the status check page', function () {
     $this->get('/')
         ->assertOk()
-        ->assertSee('Request Status')
+        ->assertSee('Check Status')
         ->assertSee(route('record-requests.status.create'));
 });
 
@@ -56,7 +56,7 @@ test('an unknown reference number shows an error and no data', function () {
         ->assertDontSee('Being processed');
 });
 
-test('a deleted request can not be looked up', function () {
+test('an archived request can not be looked up', function () {
     $recordRequest = RecordRequest::factory()->create();
     $recordRequest->delete();
 

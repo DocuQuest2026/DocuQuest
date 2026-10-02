@@ -8,6 +8,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecordRequestCancellationController;
 use App\Http\Controllers\RecordRequestController;
+use App\Http\Controllers\RecordRequestHistoryController;
 use App\Http\Controllers\RecordRequestStatusController;
 use App\Http\Controllers\Staff\DocumentReleaseController;
 use App\Http\Controllers\Staff\StudentRequestController;
@@ -26,6 +27,15 @@ Route::get('/request/status', [RecordRequestStatusController::class, 'create'])-
 Route::post('/request/status', [RecordRequestStatusController::class, 'store'])
     ->middleware('throttle:record-request-status')
     ->name('record-requests.status.store');
+
+Route::get('/request/history', [RecordRequestHistoryController::class, 'create'])->name('record-requests.history.create');
+Route::post('/request/history', [RecordRequestHistoryController::class, 'store'])
+    ->middleware('throttle:record-request-history')
+    ->name('record-requests.history.store');
+Route::post('/request/history/verify', [RecordRequestHistoryController::class, 'verify'])
+    ->middleware('throttle:record-request-history-verify')
+    ->name('record-requests.history.verify');
+Route::post('/request/history/clear', [RecordRequestHistoryController::class, 'clear'])->name('record-requests.history.clear');
 
 Route::get('/request/cancel', [RecordRequestCancellationController::class, 'create'])->name('record-requests.cancel.create');
 Route::post('/request/cancel', [RecordRequestCancellationController::class, 'store'])
@@ -57,6 +67,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->parameters(['requests' => 'recordRequest'])
         ->withTrashed(['show']);
 
+    Route::post('/requests/{recordRequest}/reveal-email', [StudentRequestController::class, 'revealEmail'])->name('requests.reveal-email')->withTrashed();
     Route::post('/requests/{recordRequest}/approve', [StudentRequestController::class, 'approve'])->name('requests.approve');
     Route::post('/requests/{recordRequest}/reject', [StudentRequestController::class, 'reject'])->name('requests.reject');
     Route::post('/requests/{recordRequest}/confirm-cancellation', [StudentRequestController::class, 'confirmCancellation'])->name('requests.confirm-cancellation');
