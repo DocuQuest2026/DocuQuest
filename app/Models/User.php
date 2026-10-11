@@ -35,6 +35,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $attributes = [
         'role' => 'student',
         'is_active' => true,
+        'is_super_admin' => false,
     ];
 
     /**
@@ -49,6 +50,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'role' => Role::class,
             'is_active' => 'boolean',
+            'is_super_admin' => 'boolean',
             'last_seen_at' => 'datetime',
             'deleted_at' => 'datetime',
         ];
@@ -67,6 +69,15 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isAdmin(): bool
     {
         return $this->role === Role::Admin;
+    }
+
+    /**
+     * Whether the user is the protected super administrator, whose account no one else can
+     * edit, reset, or delete.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->isAdmin() && $this->is_super_admin;
     }
 
     /**

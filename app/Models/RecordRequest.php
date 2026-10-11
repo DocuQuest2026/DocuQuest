@@ -105,6 +105,24 @@ class RecordRequest extends Model
     }
 
     /**
+     * How many more requests the registrar accepts today. Cancelled and archived requests
+     * still count, so the limit can not be reset by cancelling.
+     *
+     * The count is cached with the other request counts, which are cleared whenever a request
+     * changes, so checking the limit rarely costs a database round trip.
+     */
+    public static function remainingToday(): int
+    {
+        $submittedToday = Cache::remember(
+            'request-limit.today.'.now()->toDateString().'.'.static::cacheVersion(),
+            self::BADGE_COUNTS_CACHE_SECONDS,
+            fn (): int => static::withTrashed()->where('created_at', '>=', now()->startOfDay())->count(),
+        );
+
+        return max(0, (int) config('school.daily_request_limit') - $submittedToday);
+    }
+
+    /**
      * Only requests the registrar has not acted on, and that are still within the
      * cancellation window, can have cancellation requested.
      */
@@ -525,12 +543,21 @@ class RecordRequest extends Model
     }
 
     /**
-     * Generate a reference number that no other request is using.
+     * A random reference number, with no check that it is unused.
+     */
+    public static function randomReferenceNumber(): string
+    {
+        return 'REQ-'.Str::upper(Str::random(8));
+    }
+
+    /**
+     * A reference number no existing request uses. Costs a database round trip; the request
+     * form skips it with randomReferenceNumber() and relies on the unique index instead.
      */
     public static function generateReferenceNumber(): string
     {
         do {
-            $referenceNumber = 'REQ-'.Str::upper(Str::random(8));
+            $referenceNumber = static::randomReferenceNumber();
         } while (static::where('reference_no', $referenceNumber)->exists());
 
         return $referenceNumber;

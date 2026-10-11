@@ -20,7 +20,7 @@ class RecordRequestController extends Controller
      */
     public function create(): View
     {
-        return view('record-requests.create');
+        return view('record-requests.create', ['requestsClosed' => RecordRequest::remainingToday() === 0]);
     }
 
     /**
@@ -31,11 +31,17 @@ class RecordRequestController extends Controller
     public function store(StoreRecordRequestRequest $request): RedirectResponse
     {
         $validated = $request->validated();
+
+        if (RecordRequest::remainingToday() < count($validated['documents'])) {
+            return back()
+                ->withInput()
+                ->withErrors(['throttle' => __('DocuQuest is receiving a lot of requests today and can not accept new ones for the moment. Please try again tomorrow.')]);
+        }
+
         $chosenDocuments = $validated['documents'];
         unset($validated['documents']);
 
-        /** @var Collection<int, RecordRequest> $recordRequests */
-        $recordRequests = DB::transaction(function () use ($validated, $chosenDocuments): Collection {
+        $createRequests = function () use ($validated, $chosenDocuments): Collection {
             $created = new Collection;
 
             foreach (DocumentType::offered() as $documentType) {
@@ -48,12 +54,17 @@ class RecordRequestController extends Controller
                     'document_type_id' => $documentType->id,
                     'fee_per_copy' => $documentType->fee(),
                     'copies' => $chosenDocuments[$documentType->key]['copies'],
-                    'reference_no' => RecordRequest::generateReferenceNumber(),
+                    'reference_no' => RecordRequest::randomReferenceNumber(),
                 ]));
             }
 
             return $created;
-        });
+        };
+
+        // A single insert is already atomic, so only several documents need a transaction (each
+        // database round trip is slow, and a transaction costs two).
+        /** @var Collection<int, RecordRequest> $recordRequests */
+        $recordRequests = count($chosenDocuments) === 1 ? $createRequests() : DB::transaction($createRequests);
 
         $first = $recordRequests->first();
 

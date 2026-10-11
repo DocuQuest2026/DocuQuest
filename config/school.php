@@ -82,4 +82,17 @@ return [
 
     'rate_limit_scale' => (int) env('RATE_LIMIT_SCALE', 1),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Daily Request Limit
+    |--------------------------------------------------------------------------
+    |
+    | The most document requests the registrar accepts in a single day, across
+    | all requesters. Once it is reached, the request form is closed until the
+    | next day.
+    |
+    */
+
+    'daily_request_limit' => (int) env('DAILY_REQUEST_LIMIT', 20),
+
 ];

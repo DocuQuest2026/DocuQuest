@@ -20,11 +20,12 @@ class UserPolicy
     }
 
     /**
-     * Administrators may edit office accounts; student accounts are managed by the students themselves.
+     * The super administrator's account can not be edited by anyone through this screen.
+     * Administrators may edit other office accounts; student accounts are managed by the students themselves.
      */
     public function update(User $user, User $model): bool
     {
-        return $user->isAdmin() && $model->isOfficeUser();
+        return $user->isAdmin() && $model->isOfficeUser() && ! $model->isSuperAdmin();
     }
 
     /**
@@ -32,7 +33,7 @@ class UserPolicy
      */
     public function resetPassword(User $user, User $model): bool
     {
-        return $user->isAdmin();
+        return $user->isAdmin() && (! $model->isSuperAdmin() || $user->is($model));
     }
 
     /**
@@ -41,7 +42,7 @@ class UserPolicy
      */
     public function delete(User $user, User $model): bool
     {
-        return $user->isAdmin() && $model->isOfficeUser() && ! $user->is($model);
+        return $user->isAdmin() && $model->isOfficeUser() && ! $model->isSuperAdmin() && ! $user->is($model);
     }
 
     /**
@@ -57,6 +58,6 @@ class UserPolicy
      */
     public function forceDelete(User $user, User $model): bool
     {
-        return $user->isAdmin() && $model->trashed() && ! $user->is($model);
+        return $user->isAdmin() && $model->trashed() && ! $model->isSuperAdmin() && ! $user->is($model);
     }
 }

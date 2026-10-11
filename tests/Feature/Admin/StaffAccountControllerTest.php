@@ -30,6 +30,20 @@ describe('access', function () {
 });
 
 describe('index', function () {
+    test('the super administrator is hidden from normal administrators but visible to themselves', function () {
+        $superAdmin = User::factory()->superAdmin()->create(['name' => 'Sue Superadmin']);
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('admin.staff.index'))
+            ->assertOk()
+            ->assertDontSee($superAdmin->name);
+
+        $this->actingAs($superAdmin)
+            ->get(route('admin.staff.index'))
+            ->assertOk()
+            ->assertSee($superAdmin->name);
+    });
+
     test('administrators see office accounts but not students', function () {
         $staff = User::factory()->staff()->create(['name' => 'Ana Staff']);
         $student = User::factory()->create(['name' => 'Sam Student']);

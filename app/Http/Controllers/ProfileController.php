@@ -58,7 +58,7 @@ class ProfileController extends Controller
     public function destroy(Request $request): RedirectResponse
     {
         // Only administrators can delete accounts, including their own.
-        abort_if($request->user()->isStaff(), 403);
+        abort_if($request->user()->isStaff() || $request->user()->isSuperAdmin(), 403);
 
         $request->validateWithBag('userDeletion', [
             'password' => ['required', 'current_password'],

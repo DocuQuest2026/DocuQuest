@@ -17,9 +17,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        User::factory()->admin()->create([
+        User::factory()->superAdmin()->create([
             'name' => 'Registrar Administrator',
-            'email' => 'admin@docuquest.test',
+            'email' => 'docuquest2026@gmail.com',
         ]);
 
         foreach (range(1, 3) as $number) {

@@ -106,6 +106,8 @@ test('every document type can be chosen together', function () {
 });
 
 test('requesting several documents counts as one submission for the rate limit', function () {
+    config(['school.daily_request_limit' => 1000]);
+
     foreach (range(1, 5) as $attempt) {
         $this->post(route('record-requests.store'), validRecordRequest(['documents' => everyDocument()]))->assertSessionHasNoErrors();
     }
@@ -168,4 +170,40 @@ test('the submitted screen lists every reference number when several documents w
         ->assertSee(route('record-requests.cancel.create', ['reference_no' => 'REQ-AAAA1111']), false)
         ->assertSee(route('record-requests.cancel.create', ['reference_no' => 'REQ-BBBB2222']), false)
         ->assertSee('Reminder: no cancelling once approved');
+});
+
+test('requests are refused with a busy notice once the daily limit is reached', function () {
+    Mail::fake();
+    config(['school.daily_request_limit' => 2]);
+    RecordRequest::factory()->count(2)->create();
+
+    $this->get(route('record-requests.create'))
+        ->assertOk()
+        ->assertSee('Requests are closed for the moment');
+
+    $this->post(route('record-requests.store'), validRecordRequest())
+        ->assertSessionHasErrors('throttle');
+
+    expect(RecordRequest::count())->toBe(2);
+    Mail::assertNothingSent();
+});
+
+test('a submission that would go over the daily limit is refused', function () {
+    Mail::fake();
+    config(['school.daily_request_limit' => 2]);
+    RecordRequest::factory()->create();
+
+    $this->post(route('record-requests.store'), validRecordRequest(['documents' => everyDocument()]))
+        ->assertSessionHasErrors('throttle');
+
+    expect(RecordRequest::count())->toBe(1);
+});
+
+test('yesterday\'s requests do not count towards today\'s limit', function () {
+    Mail::fake();
+    config(['school.daily_request_limit' => 1]);
+    RecordRequest::factory()->create(['created_at' => now()->subDay()]);
+
+    $this->post(route('record-requests.store'), validRecordRequest())
+        ->assertSessionHasNoErrors();
 });

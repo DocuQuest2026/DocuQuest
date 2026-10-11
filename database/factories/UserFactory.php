@@ -68,6 +68,17 @@ class UserFactory extends Factory
     }
 
     /**
+     * Indicate that the user is the protected super administrator.
+     */
+    public function superAdmin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => Role::Admin,
+            'is_super_admin' => true,
+        ]);
+    }
+
+    /**
      * Indicate that the account has been deactivated.
      */
     public function inactive(): static

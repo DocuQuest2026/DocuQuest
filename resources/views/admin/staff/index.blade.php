@@ -56,7 +56,12 @@
                             <tr>
                                 <td class="px-4 py-3 text-gray-900">{{ $account->name }}</td>
                                 <td class="px-4 py-3 text-gray-600">{{ $account->email }}</td>
-                                <td class="px-4 py-3 text-gray-600">{{ $account->role->label() }}</td>
+                                <td class="px-4 py-3 text-gray-600">
+                                    {{ $account->role->label() }}
+                                    @if ($account->isSuperAdmin())
+                                        <span class="ms-1 inline-flex rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">{{ __('Super admin') }}</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3">
                                     @if ($account->trashed())
                                         <span class="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">{{ __('Deleted') }}</span>
@@ -117,6 +122,8 @@
                                                 </form>
                                             </x-modal>
                                         @endcan
+                                    @elseif ($account->isSuperAdmin())
+                                        <span class="text-xs text-gray-500">{{ __('Protected') }}</span>
                                     @else
                                         <a wire:navigate.hover href="{{ route('admin.staff.edit', $account) }}" class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">{{ __('Edit') }}</a>
                                     @endif

@@ -168,6 +168,13 @@
                     <form method="POST" action="{{ route('record-requests.store') }}" class="space-y-6" x-ref="form" x-on:submit.prevent="openReview($event.target)">
                         @csrf
 
+                        @if ($requestsClosed ?? false)
+                            <div class="rounded-xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200" role="alert">
+                                <p class="font-semibold">{{ __('Requests are closed for the moment') }}</p>
+                                <p class="mt-1">{{ __('DocuQuest is receiving a lot of requests today and can not accept new ones for the moment. Please try again tomorrow.') }}</p>
+                            </div>
+                        @endif
+
                         @error('throttle')
                             <div class="rounded-xl bg-red-50 p-4 text-sm text-red-800 ring-1 ring-red-200" role="alert">{{ $message }}</div>
                         @enderror
@@ -418,7 +425,7 @@
                             <p x-show="items.length > 0" x-cloak class="mt-1 text-xs text-gray-500">{{ __('Counted in working days (Monday to Friday) from today, once the registrar starts on your request.') }}</p>
                         </div>
 
-                        <x-primary-button class="w-full justify-center rounded-xl py-3.5 text-base" x-bind:disabled="submitting">
+                        <x-primary-button class="w-full justify-center rounded-xl py-3.5 text-base" x-bind:disabled="submitting || @js($requestsClosed ?? false)">
                             <span x-show="! submitting">{{ __('Submit request') }}</span>
                             <span x-show="submitting" x-cloak>{{ __('Submitting…') }}</span>
                         </x-primary-button>

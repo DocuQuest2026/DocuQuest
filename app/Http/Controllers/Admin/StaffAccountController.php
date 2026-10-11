@@ -40,6 +40,7 @@ class StaffAccountController extends Controller
         $showingDeleted = $request->boolean('deleted');
 
         $accounts = User::office()
+            ->unless($request->user()->isSuperAdmin(), fn ($query) => $query->where('is_super_admin', false))
             ->when($showingDeleted, fn ($query) => $query->onlyTrashed())
             ->orderBy('name')
             ->orderBy('id')
