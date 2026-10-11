@@ -73,3 +73,46 @@ test('the new password must be confirmed', function () {
         ])
         ->assertSessionHasErrors('password', errorBag: 'resetPassword');
 });
+
+test('an administrator changing their own password must enter the current one', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->put(route('admin.accounts.password.update', $admin), [
+            'password' => 'a-brand-new-password',
+            'password_confirmation' => 'a-brand-new-password',
+        ])
+        ->assertSessionHasErrors('current_password', errorBag: 'resetPassword');
+
+    expect(Hash::check('a-brand-new-password', $admin->fresh()->password))->toBeFalse();
+});
+
+test('a wrong current password does not change the administrator\'s own password', function () {
+    $admin = User::factory()->admin()->create();
+    $originalHash = $admin->password;
+
+    $this->actingAs($admin)
+        ->put(route('admin.accounts.password.update', $admin), [
+            'current_password' => 'not-the-password',
+            'password' => 'a-brand-new-password',
+            'password_confirmation' => 'a-brand-new-password',
+        ])
+        ->assertSessionHasErrors('current_password', errorBag: 'resetPassword');
+
+    expect($admin->fresh()->password)->toBe($originalHash);
+});
+
+test('an administrator changes their own password with the correct current one', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->put(route('admin.accounts.password.update', $admin), [
+            'current_password' => 'password',
+            'password' => 'a-brand-new-password',
+            'password_confirmation' => 'a-brand-new-password',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('status');
+
+    expect(Hash::check('a-brand-new-password', $admin->fresh()->password))->toBeTrue();
+});

@@ -70,7 +70,7 @@ test('each request needing action shows its document, copies and what to do next
 
     $this->actingAs($staff)->get(route('dashboard'))
         ->assertOk()
-        ->assertSee($pending->document_type->label())
+        ->assertSee($pending->documentType->label())
         ->assertSeeHtml('&times; 3')
         ->assertSee('Needs approval')
         ->assertSee('Ready to release')

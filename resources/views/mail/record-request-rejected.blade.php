@@ -7,7 +7,7 @@ Unfortunately, your request could not be processed by the Office of the Registra
 ## {{ $recordRequest->reference_no }}
 </x-mail::panel>
 
-**Document:** {{ $recordRequest->document_type->label() }}
+**Document:** {{ $recordRequest->documentType->label() }}
 
 **Reason:** {{ $reason }}
 

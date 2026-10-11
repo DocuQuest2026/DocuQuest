@@ -19,19 +19,19 @@
                     @method('PUT')
 
                     <div>
-                        <x-input-label for="name" :value="__('Name')" />
+                        <x-input-label required for="name" :value="__('Name')" />
                         <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $account->name)" required autofocus autocomplete="off" />
                         <x-input-error class="mt-2" :messages="$errors->get('name')" />
                     </div>
 
                     <div>
-                        <x-input-label for="email" :value="__('Email')" />
+                        <x-input-label required for="email" :value="__('Email')" />
                         <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $account->email)" required autocomplete="off" />
                         <x-input-error class="mt-2" :messages="$errors->get('email')" />
                     </div>
 
                     <div>
-                        <x-input-label for="role" :value="__('Role')" />
+                        <x-input-label required for="role" :value="__('Role')" />
                         <x-select-input id="role" name="role" class="mt-1 block w-full" required>
                             @foreach ($roles as $role)
                                 <option value="{{ $role->value }}" @selected(old('role', $account->role->value) === $role->value)>{{ $role->label() }}</option>

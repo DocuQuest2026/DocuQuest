@@ -259,6 +259,18 @@ new class extends Component
     }
 
     /**
+     * Each waiting request's place in the queue (urgent first, then first-come, first-served),
+     * shown in the Queue column.
+     *
+     * @return array<int, int>
+     */
+    #[Computed]
+    public function queuePositions(): array
+    {
+        return RecordRequest::queuePositions();
+    }
+
+    /**
      * @return Paginator<int, RecordRequest>
      */
     protected function paginatedRequests(): Paginator
@@ -295,6 +307,7 @@ new class extends Component
                 $statusFilter === RequestStatus::Released,
                 fn ($query) => $query->whereDoesntHave('release', fn ($q) => $q->whereNotNull('claimed_at'))
             )
+            ->urgentFirst()
             ->oldest()
             ->orderBy('id')
             ->simplePaginate(15);
@@ -418,7 +431,7 @@ new class extends Component
                         x-show="($wire.badges['{{ $filterableStatus->value }}'] ?? 0) > 0"
                         x-cloak
                         x-text="$wire.badges['{{ $filterableStatus->value }}'] > 9 ? '9+' : $wire.badges['{{ $filterableStatus->value }}']"
-                        class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white"
+                        class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full px-1 {{ match ($filterableStatus) { RequestStatus::Pending => 'bg-orange-500', RequestStatus::Approved => 'bg-blue-600', default => 'bg-green-600' } }} text-[10px] font-semibold text-white"
                     ></span>
                 @endif
             </button>
@@ -449,6 +462,7 @@ new class extends Component
         <table class="min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-600">
                 <tr>
+                    <th scope="col" class="px-5 py-3 font-semibold">{{ __('Queue') }}</th>
                     <th scope="col" class="px-5 py-3 font-semibold">{{ __('Reference') }}</th>
                     <th scope="col" class="px-5 py-3 font-semibold">{{ __('Student') }}</th>
                     <th scope="col" class="px-5 py-3 font-semibold">{{ __('Document') }}</th>
@@ -471,12 +485,17 @@ new class extends Component
                         data-claimed="{{ $recordRequest->relationLoaded('release') && $recordRequest->release?->claimed_at ? 1 : 0 }}"
                         x-show="rowVisible($el.dataset)"
                     >
-                        <td class="px-5 py-4 font-medium text-gray-900">{{ $recordRequest->reference_no }}</td>
+                        <td class="px-5 py-4 font-semibold text-gray-900">
+                            {{ $this->queuePositions[$recordRequest->id] ?? "—" }}
+                        </td>
+                        <td class="px-5 py-4 font-medium text-gray-900">
+                            {{ $recordRequest->reference_no }}
+                        </td>
                         <td class="px-5 py-4 text-gray-600">
                             {{ $recordRequest->fullName() }}
                             <span class="block text-sm text-gray-600">{{ $recordRequest->student_no }}</span>
                         </td>
-                        <td class="px-5 py-4 text-gray-600">{{ $recordRequest->document_type->label() }}</td>
+                        <td class="px-5 py-4 text-gray-600">{{ $recordRequest->documentType->label() }}</td>
                         <td class="px-5 py-4 text-gray-600">{{ $recordRequest->copies }}</td>
                         <td class="px-5 py-4 text-gray-600">
                             @php
@@ -488,9 +507,26 @@ new class extends Component
                         </td>
                         <td class="px-5 py-4">
                             <span class="inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $recordRequest->staffStatus()["classes"] }}">{{ $recordRequest->staffStatus()["label"] }}</span>
+                            @if ($recordRequest->isUrgent())
+                                <span class="ml-1 inline-flex whitespace-nowrap rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800">{{ __('Urgent') }}</span>
+                            @endif
                         </td>
                         <td class="px-5 py-4 text-right space-x-3 whitespace-nowrap">
                             <a wire:navigate.hover href="{{ route('requests.show', $recordRequest) }}" class="inline-flex items-center rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">{{ __('View') }}</a>
+
+                            @can('prioritize', $recordRequest)
+                                <form method="POST" action="{{ route('requests.urgent', $recordRequest) }}" class="inline">
+                                    @csrf
+                                    <button
+                                        type="submit"
+                                        class="inline-flex items-center rounded-lg p-1.5 ring-1 ring-inset transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 {{ $recordRequest->is_urgent ? 'bg-red-600 text-white ring-red-600 hover:bg-red-700' : 'bg-white text-gray-500 ring-gray-300 hover:bg-red-50 hover:text-red-600 hover:ring-red-300' }}"
+                                        title="{{ $recordRequest->is_urgent ? __('Remove urgent flag') : __('Mark as urgent') }}"
+                                    >
+                                        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="{{ $recordRequest->is_urgent ? 'currentColor' : 'none' }}" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5" /></svg>
+                                        <span class="sr-only">{{ $recordRequest->is_urgent ? __('Remove urgent flag') : __('Mark as urgent') }}</span>
+                                    </button>
+                                </form>
+                            @endcan
 
                             @can('claim', $recordRequest)
                                 <button
@@ -510,7 +546,7 @@ new class extends Component
                                         </p>
 
                                         <div class="mt-4">
-                                            <x-input-label for="claimed_at_{{ $recordRequest->id }}" :value="__('Claimed at')" />
+                                            <x-input-label required for="claimed_at_{{ $recordRequest->id }}" :value="__('Claimed at')" />
                                             <x-text-input
                                                 id="claimed_at_{{ $recordRequest->id }}"
                                                 name="claimed_at"
@@ -545,7 +581,7 @@ new class extends Component
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-5 py-12 text-center text-gray-600">
+                        <td colspan="8" class="px-5 py-12 text-center text-gray-600">
                             @if (trim($this->search) !== '')
                                 {{ __('No requests match your search.') }}
                             @elseif ($this->day !== '')

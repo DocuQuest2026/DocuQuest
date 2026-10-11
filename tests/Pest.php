@@ -1,8 +1,9 @@
 <?php
 
-use App\Enums\DocumentType;
 use App\Enums\EnrolmentStatus;
+use App\Models\DocumentType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\DuskTestCase;
 use Tests\TestCase;
 
 /*
@@ -19,6 +20,12 @@ use Tests\TestCase;
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
+
+// Browser tests drive a real browser against a separate copy of the app (see DuskTestCase).
+pest()->extend(DuskTestCase::class)->in('Browser');
+
+// Existing tests build requests in months before the real first month, so open the filters up.
+pest()->beforeEach(fn () => config(['school.first_request_month' => '2026-01']))->in('Feature');
 
 /*
 |--------------------------------------------------------------------------
@@ -68,8 +75,16 @@ function validRecordRequest(array $overrides = []): array
         'enrolment_status' => EnrolmentStatus::Alumni->value,
         'email' => 'maria.cruz@gmail.com',
         'contact_no' => '09171234567',
-        'documents' => [DocumentType::TranscriptOfRecords->value => ['copies' => 2]],
+        'documents' => ['transcript_of_records' => ['copies' => 2]],
         'purpose' => 'Employment',
         ...$overrides,
     ];
+}
+
+/**
+ * One of the documents the registrar offers, looked up by its key (e.g. "transcript_of_records").
+ */
+function documentType(string $key): DocumentType
+{
+    return DocumentType::where('key', $key)->firstOrFail();
 }

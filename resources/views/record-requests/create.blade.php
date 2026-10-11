@@ -77,15 +77,15 @@
                 </div>
             @else
                 @php
-                    $documents = collect(\App\Enums\DocumentType::cases())->mapWithKeys(fn ($document) => [
-                        $document->value => ['label' => __($document->label()), 'fee' => $document->fee()],
+                    $documents = collect(\App\Models\DocumentType::offered())->mapWithKeys(fn ($document) => [
+                        $document->key => ['label' => __($document->label()), 'fee' => $document->fee(), 'days' => $document->processingDays(), 'ready' => $document->estimatedReadyDate()->format('D, M j, Y')],
                     ]);
                     $oldDocuments = (array) old('documents', []);
-                    $chosenDocuments = collect(\App\Enums\DocumentType::cases())->mapWithKeys(fn ($document) => [
-                        $document->value => array_key_exists($document->value, $oldDocuments),
+                    $chosenDocuments = collect(\App\Models\DocumentType::offered())->mapWithKeys(fn ($document) => [
+                        $document->key => array_key_exists($document->key, $oldDocuments),
                     ]);
-                    $copiesByDocument = collect(\App\Enums\DocumentType::cases())->mapWithKeys(fn ($document) => [
-                        $document->value => (int) data_get($oldDocuments, $document->value.'.copies', 1),
+                    $copiesByDocument = collect(\App\Models\DocumentType::offered())->mapWithKeys(fn ($document) => [
+                        $document->key => (int) data_get($oldDocuments, $document->key.'.copies', 1),
                     ]);
                     $hasRepresentative = filled(old('designated_representative_name'))
                         || $errors->has('designated_representative_name')
@@ -141,6 +141,7 @@
                                 contactNo: field('contact_no'),
                                 documents: this.items.map((item) => ({ label: item.label, copies: item.copies, subtotal: this.peso(item.subtotal) })),
                                 total: this.peso(this.total),
+                                ready: this.latestReady,
                                 representative: this.hasRepresentative ? field('designated_representative_name') : '',
                             };
 
@@ -156,9 +157,10 @@
                         get items() {
                             return Object.entries(this.documents)
                                 .filter(([type]) => this.chosen[type])
-                                .map(([type, document]) => ({ type, label: document.label, fee: document.fee, copies: this.quantity(type), subtotal: document.fee * this.quantity(type) }));
+                                .map(([type, document]) => ({ type, label: document.label, fee: document.fee, days: document.days, ready: document.ready, copies: this.quantity(type), subtotal: document.fee * this.quantity(type) }));
                         },
                         get total() { return this.items.reduce((sum, item) => sum + item.subtotal, 0); },
+                        get latestReady() { return this.items.reduce((latest, item) => (latest === null || item.days > latest.days ? item : latest), null)?.ready ?? '—'; },
                         peso(amount) { return '₱' + Number(amount).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
                     }"
                     x-on:pageshow.window="submitting = false; confirming = false"
@@ -184,14 +186,14 @@
 
                             <div class="mt-6 space-y-5">
                                 <div>
-                                    <x-input-label for="student_no" :value="__('Student number')" />
+                                    <x-input-label required for="student_no" :value="__('Student number')" />
                                     <x-text-input id="student_no" class="mt-1 block w-full rounded-lg py-2.5" type="text" name="student_no" :value="old('student_no')" required autofocus placeholder="2024-00001" />
                                     <x-input-error :messages="$errors->get('student_no')" class="mt-2" />
                                 </div>
 
                                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                                     <div>
-                                        <x-input-label for="first_name" :value="__('First name')" />
+                                        <x-input-label required for="first_name" :value="__('First name')" />
                                         <x-text-input id="first_name" class="mt-1 block w-full rounded-lg py-2.5" type="text" name="first_name" :value="old('first_name')" required autocomplete="given-name" title="{{ __('Letters only, no numbers.') }}" x-on:input="$el.value = $el.value.replace(/\p{N}/gu, '')" />
                                         <x-input-error :messages="$errors->get('first_name')" class="mt-2" />
                                     </div>
@@ -203,7 +205,7 @@
                                     </div>
 
                                     <div>
-                                        <x-input-label for="last_name" :value="__('Last name')" />
+                                        <x-input-label required for="last_name" :value="__('Last name')" />
                                         <x-text-input id="last_name" class="mt-1 block w-full rounded-lg py-2.5" type="text" name="last_name" :value="old('last_name')" required autocomplete="family-name" title="{{ __('Letters only, no numbers.') }}" x-on:input="$el.value = $el.value.replace(/\p{N}/gu, '')" />
                                         <x-input-error :messages="$errors->get('last_name')" class="mt-2" />
                                     </div>
@@ -211,7 +213,7 @@
 
                                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     <div>
-                                        <x-input-label for="course" :value="__('Course / program')" />
+                                        <x-input-label required for="course" :value="__('Course / program')" />
                                         <x-select-input id="course" name="course" class="mt-1 block w-full rounded-lg py-2.5" required>
                                             <option value="">{{ __('Select your course') }}</option>
                                             @foreach (config('school.courses') as $course)
@@ -222,7 +224,7 @@
                                     </div>
 
                                     <div>
-                                        <x-input-label for="enrolment_status" :value="__('Enrolment status')" />
+                                        <x-input-label required for="enrolment_status" :value="__('Enrolment status')" />
                                         <x-select-input id="enrolment_status" name="enrolment_status" class="mt-1 block w-full rounded-lg py-2.5" required>
                                             @foreach (\App\Enums\EnrolmentStatus::cases() as $status)
                                                 <option value="{{ $status->value }}" @selected(old('enrolment_status') === $status->value)>{{ __($status->label()) }}</option>
@@ -234,7 +236,7 @@
 
                                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     <div>
-                                        <x-input-label for="email" :value="__('Email')" />
+                                        <x-input-label required for="email" :value="__('Email')" />
                                         <x-text-input
                                             id="email"
                                             class="mt-1 block w-full rounded-lg py-2.5"
@@ -252,7 +254,7 @@
                                     </div>
 
                                     <div>
-                                        <x-input-label for="contact_no" :value="__('Contact number')" />
+                                        <x-input-label required for="contact_no" :value="__('Contact number')" />
                                         <x-text-input
                                             id="contact_no"
                                             class="mt-1 block w-full rounded-lg py-2.5"
@@ -292,19 +294,19 @@
                                     <p class="mt-1 text-xs text-gray-500">{{ __('Tick every document you need. You can choose more than one. Fees are per copy.') }}</p>
 
                                     <div class="mt-3 space-y-3" role="group" aria-labelledby="documents-label">
-                                        @foreach (\App\Enums\DocumentType::cases() as $document)
+                                        @foreach (\App\Models\DocumentType::offered() as $document)
                                             <div
                                                 class="rounded-xl border p-4 transition"
-                                                x-bind:class="chosen['{{ $document->value }}'] ? 'border-indigo-500 bg-indigo-50/60 ring-1 ring-indigo-500' : 'border-gray-200 bg-white hover:border-gray-300'"
+                                                x-bind:class="chosen['{{ $document->key }}'] ? 'border-indigo-500 bg-indigo-50/60 ring-1 ring-indigo-500' : 'border-gray-200 bg-white hover:border-gray-300'"
                                             >
                                                 <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
                                                     <label class="flex min-w-[12rem] flex-1 cursor-pointer items-start gap-3">
                                                         <input
                                                             type="checkbox"
-                                                            id="document_{{ $document->value }}"
+                                                            id="document_{{ $document->key }}"
                                                             class="mt-0.5 h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                                            x-model="chosen['{{ $document->value }}']"
-                                                            @checked($chosenDocuments[$document->value])
+                                                            x-model="chosen['{{ $document->key }}']"
+                                                            @checked($chosenDocuments[$document->key])
                                                         >
                                                         <span>
                                                             <span class="block text-sm font-semibold text-gray-900">{{ __($document->label()) }}</span>
@@ -312,25 +314,25 @@
                                                         </span>
                                                     </label>
 
-                                                    <div x-show="chosen['{{ $document->value }}']" x-cloak class="flex shrink-0 items-center gap-2">
-                                                        <label for="copies_{{ $document->value }}" class="text-xs font-medium text-gray-600">{{ __('Copies') }}</label>
+                                                    <div x-show="chosen['{{ $document->key }}']" x-cloak class="flex shrink-0 items-center gap-2">
+                                                        <label for="copies_{{ $document->key }}" class="text-xs font-medium text-gray-600">{{ __('Copies') }}</label>
                                                         <input
                                                             type="number"
-                                                            id="copies_{{ $document->value }}"
-                                                            name="documents[{{ $document->value }}][copies]"
+                                                            id="copies_{{ $document->key }}"
+                                                            name="documents[{{ $document->key }}][copies]"
                                                             min="1"
                                                             max="10"
-                                                            value="{{ $copiesByDocument[$document->value] }}"
-                                                            x-model="copies['{{ $document->value }}']"
-                                                            x-bind:disabled="! chosen['{{ $document->value }}']"
-                                                            @disabled(! $chosenDocuments[$document->value])
+                                                            value="{{ $copiesByDocument[$document->key] }}"
+                                                            x-model="copies['{{ $document->key }}']"
+                                                            x-bind:disabled="! chosen['{{ $document->key }}']"
+                                                            @disabled(! $chosenDocuments[$document->key])
                                                             required
                                                             class="w-20 rounded-lg border-gray-300 py-2 text-center shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                                         >
                                                     </div>
                                                 </div>
 
-                                                <x-input-error :messages="$errors->get('documents.'.$document->value.'.copies')" class="mt-2" />
+                                                <x-input-error :messages="$errors->get('documents.'.$document->key.'.copies')" class="mt-2" />
                                             </div>
                                         @endforeach
                                     </div>
@@ -340,7 +342,7 @@
                                 </div>
 
                                 <div>
-                                    <x-input-label for="purpose" :value="__('Purpose of request')" />
+                                    <x-input-label required for="purpose" :value="__('Purpose of request')" />
                                     <textarea id="purpose" name="purpose" rows="3" required placeholder="{{ __('For example: scholarship application, employment, transfer') }}" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('purpose') }}</textarea>
                                     <x-input-error :messages="$errors->get('purpose')" class="mt-2" />
                                 </div>
@@ -408,6 +410,12 @@
                                 <span class="text-sm font-medium text-gray-700">{{ __('Estimated fee') }}</span>
                                 <span class="text-2xl font-bold text-indigo-600" x-text="items.length ? peso(total) : '—'"></span>
                             </div>
+
+                            <div x-show="items.length > 0" x-cloak class="mt-3 flex items-center justify-between gap-4 text-sm">
+                                <span class="font-medium text-gray-700">{{ __('Estimated ready by') }}</span>
+                                <span class="font-semibold text-gray-900" x-text="latestReady"></span>
+                            </div>
+                            <p x-show="items.length > 0" x-cloak class="mt-1 text-xs text-gray-500">{{ __('Counted in working days (Monday to Friday) from today, once the registrar starts on your request.') }}</p>
                         </div>
 
                         <x-primary-button class="w-full justify-center rounded-xl py-3.5 text-base" x-bind:disabled="submitting">
@@ -498,6 +506,10 @@
                                     <div class="flex items-end justify-between gap-4 rounded-xl bg-indigo-50 px-4 py-3">
                                         <dt class="text-sm font-medium text-indigo-900">{{ __('Estimated fee') }}</dt>
                                         <dd class="text-xl font-bold text-indigo-700" x-text="review.total"></dd>
+                                    </div>
+                                    <div class="flex justify-between gap-4">
+                                        <dt class="text-gray-500">{{ __('Estimated ready by') }}</dt>
+                                        <dd class="text-right font-medium text-gray-900" x-text="review.ready"></dd>
                                     </div>
                                 </dl>
 

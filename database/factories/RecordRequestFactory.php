@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use App\Enums\DocumentType;
 use App\Enums\EnrolmentStatus;
 use App\Enums\RequestStatus;
 use App\Models\DocumentRelease;
+use App\Models\DocumentType;
 use App\Models\RecordRequest;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -31,7 +31,8 @@ class RecordRequestFactory extends Factory
             'enrolment_status' => EnrolmentStatus::Alumni,
             'email' => fake()->safeEmail(),
             'contact_no' => fake()->numerify('09#########'),
-            'document_type' => fake()->randomElement(DocumentType::cases()),
+            'document_type_id' => fn () => DocumentType::offered()->random()->id,
+            'fee_per_copy' => fn (array $attributes) => DocumentType::everyDocument()->get($attributes['document_type_id'])->fee(),
             'copies' => 1,
             'purpose' => fake()->sentence(),
             'status' => RequestStatus::Pending,
@@ -57,6 +58,16 @@ class RecordRequestFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'status' => RequestStatus::CancellationRequested,
             'cancellation_requested_at' => now(),
+        ]);
+    }
+
+    /**
+     * Indicate that staff flagged the request as urgent.
+     */
+    public function urgent(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_urgent' => true,
         ]);
     }
 

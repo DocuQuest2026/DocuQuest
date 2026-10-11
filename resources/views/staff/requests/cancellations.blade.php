@@ -106,7 +106,7 @@
                                     {{ $recordRequest->fullName() }}
                                     <span class="block text-xs text-gray-500">{{ $recordRequest->student_no }}</span>
                                 </td>
-                                <td class="px-4 py-3 text-gray-600">{{ $recordRequest->document_type->label() }}</td>
+                                <td class="px-4 py-3 text-gray-600">{{ $recordRequest->documentType->label() }}</td>
                                 <td class="px-4 py-3 text-gray-600 max-w-xs truncate" title="{{ $recordRequest->cancellation_reason }}">{{ $recordRequest->cancellation_reason }}</td>
                                 <td class="px-4 py-3 text-gray-600">
                                     {{ ($showingCancelled ? $recordRequest->cancelled_at : $recordRequest->cancellation_requested_at)->format('M j, Y g:i A') }}

@@ -19,7 +19,7 @@
                 </div>
                 <div class="flex justify-between gap-4 border-b border-gray-100 pb-3">
                     <dt class="text-gray-500">{{ __('Document') }}</dt>
-                    <dd class="text-gray-900">{{ $release->recordRequest->document_type->label() }}</dd>
+                    <dd class="text-gray-900">{{ $release->recordRequest->documentType->label() }}</dd>
                 </div>
                 <div class="flex justify-between gap-4 border-b border-gray-100 pb-3">
                     <dt class="text-gray-500">{{ __('Requester') }}</dt>

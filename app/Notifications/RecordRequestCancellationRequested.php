@@ -31,7 +31,7 @@ class RecordRequestCancellationRequested extends Notification
         return (new MailMessage)
             ->subject("Cancellation requested: {$this->recordRequest->reference_no}")
             ->line("{$this->recordRequest->fullName()} has asked to cancel request {$this->recordRequest->reference_no}.")
-            ->line("Document: {$this->recordRequest->document_type->label()}")
+            ->line("Document: {$this->recordRequest->documentType->label()}")
             ->action('Review request', route('requests.show', $this->recordRequest))
             ->line('Confirm or deny the cancellation from the request page.');
     }
@@ -46,7 +46,7 @@ class RecordRequestCancellationRequested extends Notification
         return [
             'reference_no' => $this->recordRequest->reference_no,
             'student_name' => $this->recordRequest->fullName(),
-            'document_type' => $this->recordRequest->document_type->label(),
+            'document_type' => $this->recordRequest->documentType->label(),
             'url' => route('requests.show', $this->recordRequest),
         ];
     }

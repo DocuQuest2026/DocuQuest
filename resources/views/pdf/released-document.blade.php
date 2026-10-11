@@ -22,7 +22,7 @@
         <table>
             <tr>
                 <td class="label">Document</td>
-                <td>{{ $recordRequest->document_type->label() }}</td>
+                <td>{{ $recordRequest->documentType->label() }}</td>
             </tr>
             <tr>
                 <td class="label">Requester</td>

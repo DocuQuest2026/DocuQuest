@@ -10,7 +10,7 @@ test('the verification link shows the reference number, document type, requester
     $this->get($release->verificationUrl())
         ->assertOk()
         ->assertSee($recordRequest->reference_no)
-        ->assertSee($recordRequest->document_type->label())
+        ->assertSee($recordRequest->documentType->label())
         ->assertSee($recordRequest->fullName())
         ->assertSee($release->released_at->format('M j, Y'));
 });

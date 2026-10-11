@@ -31,6 +31,15 @@ class RecordRequestPolicy
         return $user->isOfficeUser() && $recordRequest->isRejectable();
     }
 
+    /**
+     * Registrar staff and administrators can flag a request that is still waiting on staff as
+     * urgent, or clear the flag.
+     */
+    public function prioritize(User $user, RecordRequest $recordRequest): bool
+    {
+        return $user->isOfficeUser() && ! $recordRequest->trashed() && $recordRequest->isUrgencyChangeable();
+    }
+
     public function release(User $user, RecordRequest $recordRequest): bool
     {
         return $user->isOfficeUser() && $recordRequest->isReleasable();

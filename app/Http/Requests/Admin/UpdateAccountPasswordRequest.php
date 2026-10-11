@@ -31,8 +31,23 @@ class UpdateAccountPasswordRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'password' => ['required', 'confirmed', Password::defaults()],
         ];
+
+        if ($this->isChangingOwnPassword()) {
+            $rules['current_password'] = ['required', 'current_password'];
+        }
+
+        return $rules;
+    }
+
+    /**
+     * Whether the signed-in user is changing their own password, in which case they must prove
+     * they know the current one. Resetting someone else's password does not need theirs.
+     */
+    public function isChangingOwnPassword(): bool
+    {
+        return $this->route('user')?->is($this->user()) ?? false;
     }
 }

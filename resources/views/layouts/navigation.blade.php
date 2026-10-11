@@ -91,7 +91,7 @@
                             x-on:request-badges-updated.window="count = $event.detail.pending"
                             x-show="count > 0"
                             x-text="count > 9 ? '9+' : count"
-                            class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white"
+                            class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-orange-500 px-1 text-[10px] font-semibold text-white"
                         >{{ $pendingRequestsCount > 9 ? '9+' : $pendingRequestsCount }}</span>
                     @endif
                 </x-nav-link>
@@ -99,16 +99,28 @@
                 <x-nav-link :href="route('requests.cancellations')" :active="request()->routeIs('requests.cancellations')">
                     {{ __('Cancellation Requests') }}
                     @if ($pendingCancellationsCount > 0)
-                        <span class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">
+                        <span class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-orange-500 px-1 text-[10px] font-semibold text-white">
                             {{ $pendingCancellationsCount > 9 ? '9+' : $pendingCancellationsCount }}
                         </span>
                     @endif
                 </x-nav-link>
             @endcan
 
+            @can('viewAny', \App\Models\RecordRequest::class)
+                <x-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.*')">
+                    {{ __('Reports') }}
+                </x-nav-link>
+            @endcan
+
             @can('viewAny', \App\Models\User::class)
                 <x-nav-link :href="route('admin.staff.index')" :active="request()->routeIs('admin.staff.*')">
                     {{ __('Staff accounts') }}
+                </x-nav-link>
+            @endcan
+
+            @can('viewAny', \App\Models\DocumentType::class)
+                <x-nav-link :href="route('admin.document-types.index')" :active="request()->routeIs('admin.document-types.*')">
+                    {{ __('Documents') }}
                 </x-nav-link>
             @endcan
         </div>
@@ -125,7 +137,7 @@
                 <x-responsive-nav-link :href="route('requests.cancellations')" :active="request()->routeIs('requests.cancellations')">
                     {{ __('Cancellation Requests') }}
                     @if ($pendingCancellationsCount > 0)
-                        <span class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">
+                        <span class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-orange-500 px-1 text-[10px] font-semibold text-white">
                             {{ $pendingCancellationsCount > 9 ? '9+' : $pendingCancellationsCount }}
                         </span>
                     @endif
@@ -139,15 +151,27 @@
                             x-on:request-badges-updated.window="count = $event.detail.pending"
                             x-show="count > 0"
                             x-text="count > 9 ? '9+' : count"
-                            class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white"
+                            class="ms-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-orange-500 px-1 text-[10px] font-semibold text-white"
                         >{{ $pendingRequestsCount > 9 ? '9+' : $pendingRequestsCount }}</span>
                     @endif
+                </x-responsive-nav-link>
+            @endcan
+
+            @can('viewAny', \App\Models\RecordRequest::class)
+                <x-responsive-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.*')">
+                    {{ __('Reports') }}
                 </x-responsive-nav-link>
             @endcan
 
             @can('viewAny', \App\Models\User::class)
                 <x-responsive-nav-link :href="route('admin.staff.index')" :active="request()->routeIs('admin.staff.*')">
                     {{ __('Staff accounts') }}
+                </x-responsive-nav-link>
+            @endcan
+
+            @can('viewAny', \App\Models\DocumentType::class)
+                <x-responsive-nav-link :href="route('admin.document-types.index')" :active="request()->routeIs('admin.document-types.*')">
+                    {{ __('Documents') }}
                 </x-responsive-nav-link>
             @endcan
         </div>

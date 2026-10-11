@@ -38,7 +38,7 @@
                             __('Contact number') => $recordRequest->contact_no,
                         ],
                         __('Request') => [
-                            __('Document') => $recordRequest->document_type->label(),
+                            __('Document') => $recordRequest->documentType->label(),
                             __('Copies') => $recordRequest->copies,
                             __('Purpose') => $recordRequest->purpose,
                             ...($recordRequest->designated_representative_name ? [__('Authorized representative') => $recordRequest->designated_representative_name] : []),
@@ -69,9 +69,24 @@
                     <p class="mt-1 text-sm text-gray-600">{{ __('Submitted :date', ['date' => $recordRequest->created_at->format('M j, Y g:i A')]) }}</p>
                 </div>
 
-                <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold {{ $recordRequest->staffStatus()['classes'] }}">
-                    {{ $recordRequest->staffStatus()['label'] }}
-                </span>
+                <div class="flex flex-wrap items-center gap-3">
+                    @if ($recordRequest->isUrgent())
+                        <span class="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-sm font-semibold text-red-800">{{ __('Urgent') }}</span>
+                    @endif
+
+                    <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold {{ $recordRequest->staffStatus()['classes'] }}">
+                        {{ $recordRequest->staffStatus()['label'] }}
+                    </span>
+
+                    @can('prioritize', $recordRequest)
+                        <form method="POST" action="{{ route('requests.urgent', $recordRequest) }}">
+                            @csrf
+                            <button type="submit" class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold ring-1 ring-inset transition focus:outline-none focus:ring-2 focus:ring-offset-2 {{ $recordRequest->is_urgent ? 'bg-gray-50 text-gray-700 ring-gray-300 hover:bg-gray-100 focus:ring-gray-500' : 'bg-red-50 text-red-700 ring-red-200 hover:bg-red-600 hover:text-white hover:ring-red-600 focus:ring-red-500' }}">
+                                {{ $recordRequest->is_urgent ? __('Remove urgent flag') : __('Mark as urgent') }}
+                            </button>
+                        </form>
+                    @endcan
+                </div>
             </div>
 
             <div class="grid gap-4 lg:grid-cols-2">
@@ -179,7 +194,7 @@
                                     </p>
 
                                     <div class="mt-4">
-                                        <x-input-label for="reject_reason" :value="__('Reason for rejection')" />
+                                        <x-input-label required for="reject_reason" :value="__('Reason for rejection')" />
                                         <textarea
                                             id="reject_reason"
                                             name="reason"
@@ -226,7 +241,7 @@
                                     </p>
 
                                     <div class="mt-4">
-                                        <x-input-label for="claimed_at" :value="__('Claimed at')" />
+                                        <x-input-label required for="claimed_at" :value="__('Claimed at')" />
                                         <x-text-input
                                             id="claimed_at"
                                             name="claimed_at"

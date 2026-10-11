@@ -63,11 +63,23 @@ return [
     |--------------------------------------------------------------------------
     |
     | The first month (as YYYY-MM) the system was in use. The month filter on the
-    | staff requests list can not go earlier than this, since no requests exist
-    | before it.
+    | staff requests list and the date filters on the reports page can not go
+    | earlier than this, since no requests exist before it.
     |
     */
 
-    'first_request_month' => '2026-01',
+    'first_request_month' => '2026-09',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Rate Limit Scale
+    |--------------------------------------------------------------------------
+    |
+    | Multiplies the attempt limits on the public forms. Leave it at 1; only the
+    | automated load tests, which all come from one address, raise it.
+    |
+    */
+
+    'rate_limit_scale' => (int) env('RATE_LIMIT_SCALE', 1),
 
 ];

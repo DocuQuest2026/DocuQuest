@@ -7,7 +7,7 @@ Your request has been cancelled as you asked. This confirms it — no further ac
 ## {{ $recordRequest->reference_no }}
 </x-mail::panel>
 
-**Document:** {{ $recordRequest->document_type->label() }}
+**Document:** {{ $recordRequest->documentType->label() }}
 
 If you need this document after all, you are welcome to submit a new request.
 

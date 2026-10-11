@@ -8,9 +8,10 @@ We received your request for {{ $recordRequests->count() }} student records. Eac
 <x-mail::panel>
 ## {{ $item->reference_no }}
 
-**Document:** {{ $item->document_type->label() }}<br>
+**Document:** {{ $item->documentType->label() }}<br>
 **Copies:** {{ $item->copies }}<br>
-**Fee:** {{ $item->document_type->formattedFee() }} per copy
+**Fee:** {{ $item->formattedFeePerCopy() }} per copy<br>
+**Estimated ready by:** {{ $item->estimatedReadyDate()?->format('D, M j, Y') }}
 
 <a href="{{ $cancelUrls[$item->reference_no] }}">Cancel this request</a>
 </x-mail::panel>
@@ -34,9 +35,10 @@ Your reference number:
 
 Keep this number. You will need it to follow up on your request.
 
-**Document:** {{ $recordRequest->document_type->label() }}<br>
+**Document:** {{ $recordRequest->documentType->label() }}<br>
 **Copies:** {{ $recordRequest->copies }}<br>
-**Fee per copy:** {{ $recordRequest->document_type->formattedFee() }}
+**Fee per copy:** {{ $recordRequest->formattedFeePerCopy() }}<br>
+**Estimated ready by:** {{ $recordRequest->estimatedReadyDate()?->format('D, M j, Y') }}
 
 Made a mistake or no longer need this? You can request cancellation {{ \App\Models\RecordRequest::cancellationWindowPhrase() }} of submitting.
 

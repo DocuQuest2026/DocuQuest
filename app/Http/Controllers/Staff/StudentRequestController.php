@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Staff;
 use App\Enums\RequestStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Staff\RejectRecordRequestRequest;
+use App\Mail\RecordRequestApproved;
 use App\Mail\RecordRequestCancellationConfirmed;
 use App\Mail\RecordRequestRejected;
 use App\Models\RecordRequest;
@@ -115,7 +116,28 @@ class StudentRequestController extends Controller
         $recordRequest->approve();
         $this->audit->log(auth()->user(), 'request.approved', $recordRequest);
 
+        try {
+            Mail::to($recordRequest->email)->send(new RecordRequestApproved($recordRequest));
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
         return back()->with('status', __('Request approved.'));
+    }
+
+    /**
+     * Flag a request as urgent so it moves to the top of the list, or clear the flag.
+     */
+    public function toggleUrgent(RecordRequest $recordRequest): RedirectResponse
+    {
+        Gate::authorize('prioritize', $recordRequest);
+
+        $urgent = ! $recordRequest->is_urgent;
+
+        $recordRequest->setUrgent($urgent);
+        $this->audit->log(auth()->user(), $urgent ? 'request.marked_urgent' : 'request.unmarked_urgent', $recordRequest);
+
+        return back()->with('status', $urgent ? __('Request marked as urgent.') : __('Urgent flag removed.'));
     }
 
     /**

@@ -1,9 +1,9 @@
 <?php
 
-use App\Enums\DocumentType;
 use App\Enums\RequestStatus;
 use App\Enums\ValidIdType;
 use App\Mail\RecordRequestReceived;
+use App\Models\DocumentType;
 use App\Models\RecordRequest;
 
 test('the landing page links to the request form', function () {
@@ -35,7 +35,7 @@ test('the request form offers the configured courses to choose from', function (
 test('the request form shows the fee of each document', function () {
     $response = $this->get(route('record-requests.create'))->assertOk();
 
-    foreach (DocumentType::cases() as $document) {
+    foreach (DocumentType::offered() as $document) {
         $response->assertSee($document->label())->assertSee($document->formattedFee());
     }
 });
@@ -47,7 +47,7 @@ test('a record request can be submitted and returns a reference number', functio
 
     $recordRequest = RecordRequest::firstOrFail();
     expect($recordRequest->student_no)->toBe('2020-00123')
-        ->and($recordRequest->document_type)->toBe(DocumentType::TranscriptOfRecords)
+        ->and($recordRequest->documentType->key)->toBe('transcript_of_records')
         ->and($recordRequest->status)->toBe(RequestStatus::Pending)
         ->and(session('reference_no'))->toBe($recordRequest->reference_no);
 });

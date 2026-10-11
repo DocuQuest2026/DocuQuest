@@ -97,7 +97,7 @@
                         </div>
 
                         <div>
-                            <x-input-label for="reference_no" :value="__('Reference number')" />
+                            <x-input-label required for="reference_no" :value="__('Reference number')" />
                             <x-text-input
                                 id="reference_no"
                                 class="mt-1 block w-full rounded-lg py-2.5 font-mono uppercase tracking-wider placeholder:normal-case placeholder:tracking-normal"
@@ -115,14 +115,14 @@
                         </div>
 
                         <div>
-                            <x-input-label for="email" :value="__('Email')" />
+                            <x-input-label required for="email" :value="__('Email')" />
                             <x-text-input id="email" class="mt-1 block w-full rounded-lg py-2.5" type="email" name="email" :value="old('email')" required :autofocus="$referenceFromLink" autocomplete="email" placeholder="juan.delacruz@gmail.com" />
                             <p class="mt-1 text-xs text-gray-500">{{ __('Use the same email you entered on the request form.') }}</p>
                             <x-input-error :messages="$errors->get('email')" class="mt-2" />
                         </div>
 
                         <div>
-                            <x-input-label for="reason" :value="__('Reason for cancellation')" />
+                            <x-input-label required for="reason" :value="__('Reason for cancellation')" />
                             <textarea id="reason" name="reason" rows="3" maxlength="1000" required x-model="reason" placeholder="{{ __('For example: I submitted it by mistake, or I no longer need it.') }}" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('reason') }}</textarea>
                             <p class="mt-1 text-right text-xs text-gray-400"><span x-text="reason.length">0</span>/1000</p>
                             <x-input-error :messages="$errors->get('reason')" class="mt-2" />

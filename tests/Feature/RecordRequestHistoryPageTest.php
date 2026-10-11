@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\DocumentType;
 use App\Enums\RequestStatus;
 use App\Mail\RecordRequestHistoryCode;
 use App\Models\RecordRequest;
@@ -70,13 +69,13 @@ test('a new code can be requested from the code step', function () {
 test('the unlocked history lists each request with its copies, amount to pay and date', function () {
     $transcript = RecordRequest::factory()->create([
         'email' => 'maria.cruz@gmail.com',
-        'document_type' => DocumentType::TranscriptOfRecords,
+        'document_type_id' => documentType('transcript_of_records')->id,
         'copies' => 2,
         'status' => RequestStatus::Pending,
     ]);
     $enrolment = RecordRequest::factory()->approved()->create([
         'email' => 'maria.cruz@gmail.com',
-        'document_type' => DocumentType::CertificateOfEnrolment,
+        'document_type_id' => documentType('certificate_of_enrolment')->id,
         'copies' => 3,
     ]);
 
@@ -113,8 +112,8 @@ test('a request that can still be cancelled offers a cancel link in the history,
 });
 
 test('rejected and cancelled requests show no amount to pay in the history', function () {
-    RecordRequest::factory()->rejected()->create(['email' => 'maria.cruz@gmail.com', 'document_type' => DocumentType::TranscriptOfRecords, 'copies' => 2]);
-    RecordRequest::factory()->cancelled()->create(['email' => 'maria.cruz@gmail.com', 'document_type' => DocumentType::TranscriptOfRecords, 'copies' => 2]);
+    RecordRequest::factory()->rejected()->create(['email' => 'maria.cruz@gmail.com', 'document_type_id' => documentType('transcript_of_records')->id, 'copies' => 2]);
+    RecordRequest::factory()->cancelled()->create(['email' => 'maria.cruz@gmail.com', 'document_type_id' => documentType('transcript_of_records')->id, 'copies' => 2]);
 
     openHistoryFor('maria.cruz@gmail.com')
         ->assertSee('Rejected')
@@ -124,7 +123,7 @@ test('rejected and cancelled requests show no amount to pay in the history', fun
 });
 
 test('a claimed document shows as claimed with the date and a total fee in the history', function () {
-    $recordRequest = RecordRequest::factory()->released()->create(['email' => 'maria.cruz@gmail.com', 'document_type' => DocumentType::TranscriptOfRecords, 'copies' => 1]);
+    $recordRequest = RecordRequest::factory()->released()->create(['email' => 'maria.cruz@gmail.com', 'document_type_id' => documentType('transcript_of_records')->id, 'copies' => 1]);
     $claimedAt = now()->subHours(2);
     $recordRequest->release->update(['claimed_at' => $claimedAt]);
 

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -30,6 +31,12 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureRateLimiting();
         $this->shareNavigationData();
+
+        // The automated browser tests must use the built assets, not whichever Vite dev server
+        // happens to be running on the machine.
+        if ($this->app->environment(['e2e', 'dusk.local'])) {
+            Vite::useHotFile(storage_path('framework/vite.hot'));
+        }
     }
 
     /**
@@ -67,7 +74,10 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting(): void
     {
-        RateLimiter::for('record-requests', function (Request $request) {
+        // Automated load tests all come from one address, so they raise the limits (see .env.e2e).
+        $scale = max(1, (int) config('school.rate_limit_scale'));
+
+        RateLimiter::for('record-requests', function (Request $request) use ($scale) {
             $onTooManyAttempts = function (Request $request, array $headers) {
                 $minutes = max(1, (int) ceil(((int) ($headers['Retry-After'] ?? 60)) / 60));
 
@@ -80,10 +90,10 @@ class AppServiceProvider extends ServiceProvider
                     )]);
             };
 
-            $limits = [Limit::perMinutes(10, 5)->by('ip:'.$request->ip())->response($onTooManyAttempts)];
+            $limits = [Limit::perMinutes(10, 5 * $scale)->by('ip:'.$request->ip())->response($onTooManyAttempts)];
 
             if ($request->filled('student_no')) {
-                $limits[] = Limit::perMinutes(10, 5)
+                $limits[] = Limit::perMinutes(10, 5 * $scale)
                     ->by('student:'.mb_strtolower($request->string('student_no')->toString()))
                     ->response($onTooManyAttempts);
             }
@@ -91,8 +101,8 @@ class AppServiceProvider extends ServiceProvider
             return $limits;
         });
 
-        RateLimiter::for('record-request-cancellations', function (Request $request) {
-            return Limit::perMinutes(10, 5)->by('ip:'.$request->ip())->response(function (Request $request, array $headers) {
+        RateLimiter::for('record-request-cancellations', function (Request $request) use ($scale) {
+            return Limit::perMinutes(10, 5 * $scale)->by('ip:'.$request->ip())->response(function (Request $request, array $headers) {
                 $minutes = max(1, (int) ceil(((int) ($headers['Retry-After'] ?? 60)) / 60));
 
                 return back()->withInput()->withErrors(['throttle' => trans_choice(
@@ -114,21 +124,21 @@ class AppServiceProvider extends ServiceProvider
         };
 
         // Sending a code is limited per connection and per email, so one inbox can't be flooded.
-        RateLimiter::for('record-request-history', function (Request $request) use ($onHistoryThrottled) {
+        RateLimiter::for('record-request-history', function (Request $request) use ($onHistoryThrottled, $scale) {
             return [
-                Limit::perMinutes(10, 5)->by('ip:'.$request->ip())->response($onHistoryThrottled),
-                Limit::perMinutes(10, 3)->by('email:'.mb_strtolower($request->string('email')->toString()))->response($onHistoryThrottled),
+                Limit::perMinutes(10, 5 * $scale)->by('ip:'.$request->ip())->response($onHistoryThrottled),
+                Limit::perMinutes(10, 3 * $scale)->by('email:'.mb_strtolower($request->string('email')->toString()))->response($onHistoryThrottled),
             ];
         });
 
-        RateLimiter::for('record-request-history-verify', function (Request $request) use ($onHistoryThrottled) {
-            return Limit::perMinutes(10, 10)->by('ip:'.$request->ip())->response($onHistoryThrottled);
+        RateLimiter::for('record-request-history-verify', function (Request $request) use ($onHistoryThrottled, $scale) {
+            return Limit::perMinutes(10, 10 * $scale)->by('ip:'.$request->ip())->response($onHistoryThrottled);
         });
 
         // Reference numbers are high-entropy and hard to guess, but this still limits how
         // fast someone could script through attempts.
-        RateLimiter::for('record-request-status', function (Request $request) {
-            return Limit::perMinutes(10, 5)->by('ip:'.$request->ip())->response(function (Request $request, array $headers) {
+        RateLimiter::for('record-request-status', function (Request $request) use ($scale) {
+            return Limit::perMinutes(10, 5 * $scale)->by('ip:'.$request->ip())->response(function (Request $request, array $headers) {
                 $minutes = max(1, (int) ceil(((int) ($headers['Retry-After'] ?? 60)) / 60));
 
                 return back()->withInput()->withErrors(['throttle' => trans_choice(

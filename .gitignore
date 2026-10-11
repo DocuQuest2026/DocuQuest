@@ -25,3 +25,11 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+/.env.e2e
+/.env.dusk.local
+/test-results
+/playwright-report
+/tests/Browser/screenshots
+/tests/Browser/console
+/tests/Browser/source

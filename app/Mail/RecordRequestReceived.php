@@ -55,7 +55,7 @@ class RecordRequestReceived extends Mailable
                 'cancelUrls' => $this->recordRequests->mapWithKeys(fn (RecordRequest $recordRequest): array => [
                     $recordRequest->reference_no => route('record-requests.cancel.create', ['reference_no' => $recordRequest->reference_no]),
                 ]),
-                'totalFee' => $this->recordRequests->sum(fn (RecordRequest $recordRequest): int => $recordRequest->document_type->fee() * $recordRequest->copies),
+                'totalFee' => $this->recordRequests->sum(fn (RecordRequest $recordRequest): int => $recordRequest->totalFee()),
             ],
         );
     }

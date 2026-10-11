@@ -69,7 +69,7 @@
                                 <div class="flex justify-between gap-4">
                                     <dt class="text-gray-500">{{ __('Document') }}</dt>
                                     <dd class="text-right font-medium text-gray-900">
-                                        {{ $recordRequest->document_type->label() }}
+                                        {{ $recordRequest->documentType->label() }}
                                         <span class="whitespace-nowrap font-normal text-gray-500">&times; {{ trans_choice(':count copy|:count copies', $recordRequest->copies) }}</span>
                                     </dd>
                                 </div>
@@ -78,7 +78,7 @@
                                         <dt class="text-gray-500">{{ $claimedAt !== null ? __('Total fee') : __('Amount to pay') }}</dt>
                                         <dd class="text-right">
                                             <span class="block text-base font-bold text-indigo-600">{{ $recordRequest->formattedTotalFee() }}</span>
-                                            <span class="block text-xs text-gray-500">{{ $recordRequest->document_type->formattedFee() }} &times; {{ trans_choice(':count copy|:count copies', $recordRequest->copies) }}</span>
+                                            <span class="block text-xs text-gray-500">{{ $recordRequest->formattedFeePerCopy() }} &times; {{ trans_choice(':count copy|:count copies', $recordRequest->copies) }}</span>
                                         </dd>
                                     </div>
                                 @endunless
@@ -133,7 +133,7 @@
                         </div>
 
                         <div>
-                            <x-input-label for="code" :value="__('6-digit code')" />
+                            <x-input-label required for="code" :value="__('6-digit code')" />
                             <x-text-input
                                 id="code"
                                 class="mt-1 block w-full rounded-lg py-3 text-center font-mono text-2xl tracking-[0.5em]"
@@ -186,7 +186,7 @@
                     @enderror
 
                     <div>
-                        <x-input-label for="email" :value="__('Email')" />
+                        <x-input-label required for="email" :value="__('Email')" />
 
                         <div class="relative mt-1">
                             <svg class="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg>

@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\RequestStatus;
+use App\Mail\RecordRequestApproved;
 use App\Mail\RecordRequestRejected;
 use App\Models\AuditLog;
 use App\Models\RecordRequest;
@@ -30,6 +31,19 @@ test('staff can reject a pending request with a reason', function () {
     $log = AuditLog::where('action', 'request.rejected')->where('subject_id', $recordRequest->id)->first();
     expect($log)->not->toBeNull()
         ->and($log->metadata['reason'])->toBe('Incomplete details.');
+});
+
+test('approving emails the requester that the document is waiting to be released', function () {
+    Mail::fake();
+
+    $recordRequest = RecordRequest::factory()->create(['email' => 'maria@example.com']);
+    $staff = User::factory()->staff()->create();
+
+    $this->actingAs($staff)->post(route('requests.approve', $recordRequest));
+
+    Mail::assertSent(RecordRequestApproved::class, fn ($mail) => $mail->hasTo('maria@example.com')
+        && $mail->hasSubject('Request approved: '.$recordRequest->reference_no)
+        && str_contains($mail->render(), 'waiting to be released'));
 });
 
 test('rejecting emails the requester the reason', function () {

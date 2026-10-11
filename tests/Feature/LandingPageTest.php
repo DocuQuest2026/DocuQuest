@@ -1,11 +1,11 @@
 <?php
 
-use App\Enums\DocumentType;
+use App\Models\DocumentType;
 
 test('the landing page lists every document type with its per-copy fee', function () {
     $response = $this->get('/')->assertOk();
 
-    foreach (DocumentType::cases() as $documentType) {
+    foreach (DocumentType::offered() as $documentType) {
         $response->assertSee($documentType->label())->assertSee($documentType->formattedFee());
     }
 });

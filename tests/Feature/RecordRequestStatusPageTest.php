@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\DocumentType;
 use App\Enums\RequestStatus;
 use App\Models\RecordRequest;
 use Illuminate\Testing\TestResponse;
@@ -23,7 +22,7 @@ test('a pending request shows it is being processed, the processing time and a p
         ->assertSee('Being processed')
         ->assertSee('The registrar is processing your request. This takes up to 3 days, depending on the document requested.')
         ->assertSeeInOrder(['Request submitted', 'The registrar is processing for approval', 'Ready to claim'])
-        ->assertSee($recordRequest->document_type->label())
+        ->assertSee($recordRequest->documentType->label())
         ->assertSee($recordRequest->created_at->format('M j, Y'));
 });
 
@@ -115,7 +114,7 @@ test('the status page shows how many copies of the document were requested', fun
     $recordRequest = RecordRequest::factory()->create(['copies' => $copies]);
 
     lookUpStatus($recordRequest)
-        ->assertSee($recordRequest->document_type->label())
+        ->assertSee($recordRequest->documentType->label())
         ->assertSeeHtml('&times; '.$expected);
 })->with([
     'one copy' => [1, '1 copy'],
@@ -124,37 +123,37 @@ test('the status page shows how many copies of the document were requested', fun
 ]);
 
 test('a request computes its total fee from the per-copy fee and the copies', function () {
-    $recordRequest = RecordRequest::factory()->make(['document_type' => DocumentType::TranscriptOfRecords, 'copies' => 3]);
+    $recordRequest = RecordRequest::factory()->make(['document_type_id' => documentType('transcript_of_records')->id, 'copies' => 3]);
 
     expect($recordRequest->totalFee())->toBe(450)
         ->and($recordRequest->formattedTotalFee())->toBe('₱450.00');
 });
 
-test('the status page shows the amount to pay with how it adds up', function (DocumentType $document, int $copies, string $amount, string $breakdown) {
-    $recordRequest = RecordRequest::factory()->create(['document_type' => $document, 'copies' => $copies, 'status' => RequestStatus::Pending]);
+test('the status page shows the amount to pay with how it adds up', function (string $document, int $copies, string $amount, string $breakdown) {
+    $recordRequest = RecordRequest::factory()->create(['document_type_id' => documentType($document)->id, 'copies' => $copies, 'status' => RequestStatus::Pending]);
 
     lookUpStatus($recordRequest)
         ->assertSee('Amount to pay')
         ->assertSee($amount)
         ->assertSeeHtml($breakdown);
 })->with([
-    'transcript, 2 copies' => [DocumentType::TranscriptOfRecords, 2, '₱300.00', '₱150.00 &times; 2 copies'],
-    'enrolment, 1 copy' => [DocumentType::CertificateOfEnrolment, 1, '₱50.00', '₱50.00 &times; 1 copy'],
-    'graduation, 10 copies' => [DocumentType::CertificateOfGraduation, 10, '₱1,000.00', '₱100.00 &times; 10 copies'],
+    'transcript, 2 copies' => ['transcript_of_records', 2, '₱300.00', '₱150.00 &times; 2 copies'],
+    'enrolment, 1 copy' => ['certificate_of_enrolment', 1, '₱50.00', '₱50.00 &times; 1 copy'],
+    'graduation, 10 copies' => ['certificate_of_graduation', 10, '₱1,000.00', '₱100.00 &times; 10 copies'],
 ]);
 
 test('the amount to pay is shown for approved and released requests too', function () {
-    lookUpStatus(RecordRequest::factory()->approved()->create(['document_type' => DocumentType::CertifiedTrueCopyOfGrades, 'copies' => 2]))
+    lookUpStatus(RecordRequest::factory()->approved()->create(['document_type_id' => documentType('certified_true_copy_of_grades')->id, 'copies' => 2]))
         ->assertSee('Amount to pay')
         ->assertSee('₱200.00');
 
-    lookUpStatus(RecordRequest::factory()->released()->create(['document_type' => DocumentType::CertificateOfGoodMoral, 'copies' => 4]))
+    lookUpStatus(RecordRequest::factory()->released()->create(['document_type_id' => documentType('certificate_of_good_moral')->id, 'copies' => 4]))
         ->assertSee('Amount to pay')
         ->assertSee('₱200.00');
 });
 
 test('a claimed document labels the amount as the total fee', function () {
-    $recordRequest = RecordRequest::factory()->released()->create(['document_type' => DocumentType::TranscriptOfRecords, 'copies' => 1]);
+    $recordRequest = RecordRequest::factory()->released()->create(['document_type_id' => documentType('transcript_of_records')->id, 'copies' => 1]);
     $recordRequest->release->update(['claimed_at' => now()]);
 
     lookUpStatus($recordRequest)
@@ -164,7 +163,7 @@ test('a claimed document labels the amount as the total fee', function () {
 });
 
 test('rejected and cancelled requests show no amount to pay', function (string $state) {
-    $recordRequest = RecordRequest::factory()->{$state}()->create(['document_type' => DocumentType::TranscriptOfRecords, 'copies' => 2]);
+    $recordRequest = RecordRequest::factory()->{$state}()->create(['document_type_id' => documentType('transcript_of_records')->id, 'copies' => 2]);
 
     lookUpStatus($recordRequest)
         ->assertDontSee('Amount to pay')
@@ -193,3 +192,30 @@ test('once a request is approved or released the approval step says it was revie
         ->assertDontSee('The registrar is processing for approval')
         ->assertDontSee('This takes up to 4 days, depending on the document.');
 })->with(['approved', 'released']);
+
+test('the status card refreshes itself every few seconds while the page is open', function () {
+    $recordRequest = RecordRequest::factory()->create();
+
+    lookUpStatus($recordRequest)
+        ->assertSee('wire:poll.20s.visible', false)
+        ->assertSee('This page updates automatically.');
+});
+
+test('the status card shows the latest status when it refreshes', function () {
+    $recordRequest = RecordRequest::factory()->create();
+
+    $component = Livewire::test('request-status', ['referenceNo' => $recordRequest->reference_no])
+        ->assertSee('Being processed');
+
+    $recordRequest->approve();
+
+    $component->call('$refresh')->assertSee('Approved — being prepared')->assertDontSee('Being processed');
+});
+
+test('the status card can not be pointed at a different request from the browser', function () {
+    $recordRequest = RecordRequest::factory()->create();
+    $other = RecordRequest::factory()->create();
+
+    Livewire::test('request-status', ['referenceNo' => $recordRequest->reference_no])
+        ->set('referenceNo', $other->reference_no);
+})->throws(Exception::class, 'Cannot update locked property');

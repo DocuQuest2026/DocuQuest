@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\DocumentType;
 use App\Enums\EnrolmentStatus;
 use App\Enums\ValidIdType;
+use App\Models\DocumentType;
 use App\Rules\GmailAddress;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -52,8 +52,10 @@ class StoreRecordRequestRequest extends FormRequest
                     return;
                 }
 
+                $offered = DocumentType::offered()->pluck('key');
+
                 foreach (array_keys($chosen) as $type) {
-                    if (DocumentType::tryFrom((string) $type) === null) {
+                    if (! $offered->contains((string) $type)) {
                         $validator->errors()->add('documents', __('Choose only from the documents listed.'));
 
                         return;
@@ -97,7 +99,7 @@ class StoreRecordRequestRequest extends FormRequest
             'enrolment_status' => ['required', Rule::enum(EnrolmentStatus::class)],
             'email' => ['required', 'string', 'email', 'max:255', new GmailAddress],
             'contact_no' => ['required', 'string', 'digits:11'],
-            'documents' => ['required', 'array', 'min:1', 'max:'.count(DocumentType::cases())],
+            'documents' => ['required', 'array', 'min:1', 'max:'.DocumentType::offered()->count()],
             'documents.*.copies' => ['required', 'integer', 'between:1,10'],
             'purpose' => ['required', 'string', 'max:1000'],
             'designated_representative_name' => ['nullable', 'string', 'max:255'],

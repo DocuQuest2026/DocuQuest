@@ -1,8 +1,8 @@
 <?php
 
-use App\Enums\DocumentType;
 use App\Enums\RequestStatus;
 use App\Mail\RecordRequestReceived;
+use App\Models\DocumentType;
 use App\Models\RecordRequest;
 use Illuminate\Support\Facades\Mail;
 
@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\Mail;
  */
 function everyDocument(): array
 {
-    return collect(DocumentType::cases())
-        ->mapWithKeys(fn (DocumentType $type): array => [$type->value => ['copies' => 1]])
+    return collect(DocumentType::offered())
+        ->mapWithKeys(fn (DocumentType $type): array => [$type->key => ['copies' => 1]])
         ->all();
 }
 
@@ -23,21 +23,17 @@ test('a student can request several documents at once and each becomes its own r
 
     $response = $this->post(route('record-requests.store'), validRecordRequest([
         'documents' => [
-            DocumentType::CertificateOfGoodMoral->value => ['copies' => 3],
-            DocumentType::TranscriptOfRecords->value => ['copies' => 1],
-            DocumentType::CertificateOfEnrolment->value => ['copies' => 2],
+            'certificate_of_good_moral' => ['copies' => 3],
+            'transcript_of_records' => ['copies' => 1],
+            'certificate_of_enrolment' => ['copies' => 2],
         ],
     ]))->assertRedirect(route('record-requests.create'));
 
     $created = RecordRequest::orderBy('id')->get();
 
     expect($created)->toHaveCount(3)
-        ->and($created->pluck('document_type')->all())->toBe([
-            DocumentType::TranscriptOfRecords,
-            DocumentType::CertificateOfEnrolment,
-            DocumentType::CertificateOfGoodMoral,
-        ])
-        ->and($created->pluck('copies')->all())->toBe([1, 2, 3])
+        ->and($created->map->documentType->pluck('key')->all())->toBe(['certificate_of_enrolment', 'certificate_of_good_moral', 'transcript_of_records'])
+        ->and($created->pluck('copies')->all())->toBe([2, 3, 1])
         ->and($created->pluck('reference_no')->unique())->toHaveCount(3)
         ->and($created->pluck('student_no')->unique()->all())->toBe(['2020-00123'])
         ->and($created->pluck('email')->unique()->all())->toBe(['maria.cruz@gmail.com'])
@@ -45,9 +41,9 @@ test('a student can request several documents at once and each becomes its own r
 
     $response->assertSessionHas('reference_no', $created->first()->reference_no)
         ->assertSessionHas('submitted_requests', [
-            ['reference_no' => $created[0]->reference_no, 'document' => 'Transcript of Records', 'copies' => 1],
-            ['reference_no' => $created[1]->reference_no, 'document' => 'Certificate of Enrolment', 'copies' => 2],
-            ['reference_no' => $created[2]->reference_no, 'document' => 'Certificate of Good Moral Character', 'copies' => 3],
+            ['reference_no' => $created[0]->reference_no, 'document' => 'Certificate of Enrolment', 'copies' => 2],
+            ['reference_no' => $created[1]->reference_no, 'document' => 'Certificate of Good Moral Character', 'copies' => 3],
+            ['reference_no' => $created[2]->reference_no, 'document' => 'Transcript of Records', 'copies' => 1],
         ]);
 });
 
@@ -56,8 +52,8 @@ test('requesting several documents sends one email listing every reference numbe
 
     $this->post(route('record-requests.store'), validRecordRequest([
         'documents' => [
-            DocumentType::TranscriptOfRecords->value => ['copies' => 1],
-            DocumentType::CertificateOfEnrolment->value => ['copies' => 2],
+            'transcript_of_records' => ['copies' => 1],
+            'certificate_of_enrolment' => ['copies' => 2],
         ],
     ]));
 
@@ -71,7 +67,7 @@ test('requesting several documents sends one email listing every reference numbe
             && $mail->hasSubject('Your reference numbers: '.$created->pluck('reference_no')->implode(', '))
             && $created->every(fn (RecordRequest $recordRequest) => str_contains($html, $recordRequest->reference_no)
                 && str_contains($html, route('record-requests.cancel.create', ['reference_no' => $recordRequest->reference_no]))
-                && str_contains($html, $recordRequest->document_type->label()))
+                && str_contains($html, $recordRequest->documentType->label()))
             && str_contains($html, '₱250.00');
     });
 });
@@ -91,14 +87,14 @@ test('at least one valid document must be chosen', function (array $documents, s
 })->with([
     'none chosen' => [[], 'documents'],
     'unknown document' => [['diploma_of_wizardry' => ['copies' => 1]], 'documents'],
-    'known and unknown mixed' => [[DocumentType::TranscriptOfRecords->value => ['copies' => 1], 'made_up' => ['copies' => 1]], 'documents'],
-    'zero copies' => [[DocumentType::TranscriptOfRecords->value => ['copies' => 0]], 'documents.transcript_of_records.copies'],
-    'too many copies' => [[DocumentType::TranscriptOfRecords->value => ['copies' => 11]], 'documents.transcript_of_records.copies'],
-    'copies missing' => [[DocumentType::TranscriptOfRecords->value => []], 'documents.transcript_of_records.copies'],
-    'copies not a number' => [[DocumentType::TranscriptOfRecords->value => ['copies' => 'many']], 'documents.transcript_of_records.copies'],
+    'known and unknown mixed' => [['transcript_of_records' => ['copies' => 1], 'made_up' => ['copies' => 1]], 'documents'],
+    'zero copies' => [['transcript_of_records' => ['copies' => 0]], 'documents.transcript_of_records.copies'],
+    'too many copies' => [['transcript_of_records' => ['copies' => 11]], 'documents.transcript_of_records.copies'],
+    'copies missing' => [['transcript_of_records' => []], 'documents.transcript_of_records.copies'],
+    'copies not a number' => [['transcript_of_records' => ['copies' => 'many']], 'documents.transcript_of_records.copies'],
     'a document with a bad count rejects the whole request' => [[
-        DocumentType::TranscriptOfRecords->value => ['copies' => 1],
-        DocumentType::CertificateOfEnrolment->value => ['copies' => 99],
+        'transcript_of_records' => ['copies' => 1],
+        'certificate_of_enrolment' => ['copies' => 99],
     ], 'documents.certificate_of_enrolment.copies'],
 ]);
 
@@ -106,7 +102,7 @@ test('every document type can be chosen together', function () {
     $this->post(route('record-requests.store'), validRecordRequest(['documents' => everyDocument()]))
         ->assertSessionHasNoErrors();
 
-    expect(RecordRequest::count())->toBe(count(DocumentType::cases()));
+    expect(RecordRequest::count())->toBe(DocumentType::offered()->count());
 });
 
 test('requesting several documents counts as one submission for the rate limit', function () {
@@ -116,15 +112,15 @@ test('requesting several documents counts as one submission for the rate limit',
 
     $this->post(route('record-requests.store'), validRecordRequest(['documents' => everyDocument()]))->assertSessionHasErrors('throttle');
 
-    expect(RecordRequest::count())->toBe(5 * count(DocumentType::cases()));
+    expect(RecordRequest::count())->toBe(5 * DocumentType::offered()->count());
 });
 
 test('the request form lets the student tick several documents, each with its own copies', function () {
     $response = $this->get(route('record-requests.create'))->assertOk();
 
-    foreach (DocumentType::cases() as $document) {
-        $response->assertSeeHtml('name="documents['.$document->value.'][copies]"')
-            ->assertSeeHtml('id="document_'.$document->value.'"');
+    foreach (DocumentType::offered() as $document) {
+        $response->assertSeeHtml('name="documents['.$document->key.'][copies]"')
+            ->assertSeeHtml('id="document_'.$document->key.'"');
     }
 
     $response->assertSee('Tick every document you need. You can choose more than one.')
@@ -136,8 +132,8 @@ test('the request form remembers the chosen documents and their copies after a v
         ->post(route('record-requests.store'), validRecordRequest([
             'first_name' => 'Maria2',
             'documents' => [
-                DocumentType::CertificateOfGraduation->value => ['copies' => 4],
-                DocumentType::CertificateOfGoodMoral->value => ['copies' => 2],
+                'certificate_of_graduation' => ['copies' => 4],
+                'certificate_of_good_moral' => ['copies' => 2],
             ],
         ]))
         ->assertSessionHasErrors('first_name');

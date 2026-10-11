@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\DocumentType;
 use App\Http\Requests\StoreRecordRequestRequest;
 use App\Mail\RecordRequestReceived;
+use App\Models\DocumentType;
 use App\Models\RecordRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
@@ -38,15 +38,16 @@ class RecordRequestController extends Controller
         $recordRequests = DB::transaction(function () use ($validated, $chosenDocuments): Collection {
             $created = new Collection;
 
-            foreach (DocumentType::cases() as $documentType) {
-                if (! isset($chosenDocuments[$documentType->value])) {
+            foreach (DocumentType::offered() as $documentType) {
+                if (! isset($chosenDocuments[$documentType->key])) {
                     continue;
                 }
 
                 $created->push(RecordRequest::create([
                     ...$validated,
-                    'document_type' => $documentType->value,
-                    'copies' => $chosenDocuments[$documentType->value]['copies'],
+                    'document_type_id' => $documentType->id,
+                    'fee_per_copy' => $documentType->fee(),
+                    'copies' => $chosenDocuments[$documentType->key]['copies'],
                     'reference_no' => RecordRequest::generateReferenceNumber(),
                 ]));
             }
@@ -67,7 +68,7 @@ class RecordRequestController extends Controller
             ->with('reference_no', $first->reference_no)
             ->with('submitted_requests', $recordRequests->map(fn (RecordRequest $recordRequest): array => [
                 'reference_no' => $recordRequest->reference_no,
-                'document' => $recordRequest->document_type->label(),
+                'document' => $recordRequest->documentType->label(),
                 'copies' => $recordRequest->copies,
             ])->all())
             ->with('email', $first->email);

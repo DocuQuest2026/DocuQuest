@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\DocumentType;
 use App\Enums\EnrolmentStatus;
 use App\Enums\RequestStatus;
 use App\Enums\ValidIdType;
@@ -10,6 +9,7 @@ use Database\Factories\RecordRequestFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -28,7 +28,8 @@ use Illuminate\Support\Str;
     'enrolment_status',
     'email',
     'contact_no',
-    'document_type',
+    'document_type_id',
+    'fee_per_copy',
     'copies',
     'purpose',
     'designated_representative_name',
@@ -54,14 +55,45 @@ class RecordRequest extends Model
     {
         return [
             'enrolment_status' => EnrolmentStatus::class,
-            'document_type' => DocumentType::class,
             'designated_representative_id_type' => ValidIdType::class,
             'copies' => 'integer',
+            'fee_per_copy' => 'integer',
+            'is_urgent' => 'boolean',
             'status' => RequestStatus::class,
             'cancelled_at' => 'datetime',
             'cancellation_requested_at' => 'datetime',
             'deleted_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Fill in the fee per copy from the document when none is given, so a request keeps the fee
+     * it was submitted with even if the document's fee changes later.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (RecordRequest $recordRequest): void {
+            $recordRequest->fee_per_copy ??= $recordRequest->documentType->fee();
+        });
+    }
+
+    /**
+     * The document requested. It is read from the cached list of documents rather than queried,
+     * since the staff list shows it for every row.
+     *
+     * @return Attribute<DocumentType, never>
+     */
+    protected function documentType(): Attribute
+    {
+        return Attribute::get(fn (): DocumentType => DocumentType::everyDocument()->get($this->document_type_id));
+    }
+
+    /**
+     * The fee per copy this request was submitted with, formatted for display, e.g. "₱150.00".
+     */
+    public function formattedFeePerCopy(): string
+    {
+        return '₱'.number_format($this->fee_per_copy, 2);
     }
 
     /**
@@ -134,7 +166,7 @@ class RecordRequest extends Model
      */
     public function totalFee(): int
     {
-        return $this->document_type->fee() * $this->copies;
+        return $this->fee_per_copy * $this->copies;
     }
 
     /**
@@ -231,6 +263,39 @@ class RecordRequest extends Model
         return $this->status === RequestStatus::Approved;
     }
 
+    /**
+     * Only a request still waiting on staff (pending or approved) can be flagged urgent, since
+     * the flag only matters for ordering work that is not finished yet.
+     */
+    public function isUrgencyChangeable(): bool
+    {
+        return in_array($this->status, [RequestStatus::Pending, RequestStatus::Approved], true);
+    }
+
+    public function setUrgent(bool $urgent): void
+    {
+        $this->forceFill(['is_urgent' => $urgent])->save();
+    }
+
+    /**
+     * When the document should be ready, counted in working days from submission. Only
+     * requests still waiting on staff have an estimate.
+     */
+    public function estimatedReadyDate(): ?Carbon
+    {
+        return $this->isUrgencyChangeable()
+            ? $this->documentType->estimatedReadyDate($this->created_at)
+            : null;
+    }
+
+    /**
+     * Whether this request should show as urgent: flagged, and still waiting on staff.
+     */
+    public function isUrgent(): bool
+    {
+        return $this->is_urgent && $this->isUrgencyChangeable();
+    }
+
     public function approve(): void
     {
         $this->forceFill(['status' => RequestStatus::Approved])->save();
@@ -273,6 +338,22 @@ class RecordRequest extends Model
         [$local, $domain] = array_pad(explode('@', $this->email, 2), 2, '');
 
         return mb_substr($local, 0, 1).'***@'.$domain;
+    }
+
+    /**
+     * Put urgent requests that are still waiting on staff (pending or approved) ahead of the
+     * rest; later ordering applies within each group.
+     *
+     * @param  Builder<RecordRequest>  $query
+     * @return Builder<RecordRequest>
+     */
+    #[Scope]
+    protected function urgentFirst(Builder $query): Builder
+    {
+        return $query->orderByRaw(
+            'CASE WHEN record_requests.is_urgent AND record_requests.status IN (?, ?) THEN 0 ELSE 1 END',
+            [RequestStatus::Pending->value, RequestStatus::Approved->value]
+        );
     }
 
     /**
@@ -352,6 +433,45 @@ class RecordRequest extends Model
                 ->map(fn ($total): int => (int) $total)
                 ->all()
         );
+    }
+
+    /**
+     * Every request still waiting on staff (pending or approved) mapped to its place in the
+     * queue: urgent ones first, then first-come, first-served. Positions start at 1.
+     *
+     * One query numbers the whole queue, and the result is cached under the current cache
+     * version, so any request change retires it.
+     *
+     * @return array<int, int> Queue position keyed by request id.
+     */
+    public static function queuePositions(): array
+    {
+        return Cache::remember(
+            'request-queue.positions.'.static::cacheVersion(),
+            self::BADGE_COUNTS_CACHE_SECONDS,
+            fn (): array => static::query()
+                ->whereIn('status', [RequestStatus::Pending, RequestStatus::Approved])
+                ->selectRaw('id, row_number() over (order by case when is_urgent then 0 else 1 end, created_at, id) as position')
+                ->pluck('position', 'id')
+                ->map(fn ($position): int => (int) $position)
+                ->all()
+        );
+    }
+
+    /**
+     * This request's place in the queue, or null when it is not waiting on staff.
+     */
+    public function queuePosition(): ?int
+    {
+        return static::queuePositions()[$this->id] ?? null;
+    }
+
+    /**
+     * How many requests are waiting on staff in total.
+     */
+    public static function queueLength(): int
+    {
+        return count(static::queuePositions());
     }
 
     /**

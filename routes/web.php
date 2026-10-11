@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AccountPasswordController;
+use App\Http\Controllers\Admin\DocumentTypeController;
 use App\Http\Controllers\Admin\StaffAccountController;
 use App\Http\Controllers\Auth\ConfirmStaffAccountController;
 use App\Http\Controllers\DashboardController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\RecordRequestCancellationController;
 use App\Http\Controllers\RecordRequestController;
 use App\Http\Controllers\RecordRequestHistoryController;
 use App\Http\Controllers\RecordRequestStatusController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Staff\DocumentReleaseController;
 use App\Http\Controllers\Staff\StudentRequestController;
 use Illuminate\Support\Facades\Route;
@@ -65,6 +67,9 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     // Registered before the resource below so "cancellations" is never mistaken for a
     // {recordRequest} reference number by the resource's show route.
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/export', [ReportController::class, 'export'])->middleware('throttle:10,1')->name('reports.export');
+
     Route::get('/requests/cancellations', [StudentRequestController::class, 'cancellations'])->name('requests.cancellations');
 
     Route::resource('requests', StudentRequestController::class)
@@ -74,6 +79,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('/requests/{recordRequest}/reveal-email', [StudentRequestController::class, 'revealEmail'])->name('requests.reveal-email')->withTrashed();
     Route::post('/requests/{recordRequest}/approve', [StudentRequestController::class, 'approve'])->name('requests.approve');
+    Route::post('/requests/{recordRequest}/urgent', [StudentRequestController::class, 'toggleUrgent'])->name('requests.urgent');
     Route::post('/requests/{recordRequest}/reject', [StudentRequestController::class, 'reject'])->name('requests.reject');
     Route::post('/requests/{recordRequest}/confirm-cancellation', [StudentRequestController::class, 'confirmCancellation'])->name('requests.confirm-cancellation');
     Route::post('/requests/{recordRequest}/deny-cancellation', [StudentRequestController::class, 'denyCancellation'])->name('requests.deny-cancellation');
@@ -87,6 +93,10 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
     Route::resource('staff', StaffAccountController::class)
         ->parameters(['staff' => 'user'])
         ->except(['show']);
+
+    Route::resource('document-types', DocumentTypeController::class)
+        ->parameters(['document-types' => 'documentType'])
+        ->except(['show', 'destroy']);
 
     Route::post('staff/{user}/restore', [StaffAccountController::class, 'restore'])->name('staff.restore')->withTrashed();
     Route::delete('staff/{user}/force-delete', [StaffAccountController::class, 'forceDelete'])->name('staff.force-delete')->withTrashed();

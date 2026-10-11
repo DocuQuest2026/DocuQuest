@@ -25,13 +25,13 @@
                     @csrf
 
                     <div>
-                        <x-input-label for="representative_name" :value="__('Representative name')" />
+                        <x-input-label required for="representative_name" :value="__('Representative name')" />
                         <x-text-input id="representative_name" name="representative_name" type="text" class="mt-1 block w-full" :value="old('representative_name', $recordRequest->designated_representative_name)" required autofocus />
                         <x-input-error class="mt-2" :messages="$errors->get('representative_name')" />
                     </div>
 
                     <div>
-                        <x-input-label for="claim_available_at" :value="__('Available to claim from')" />
+                        <x-input-label required for="claim_available_at" :value="__('Available to claim from')" />
                         <x-text-input id="claim_available_at" name="claim_available_at" type="datetime-local" class="mt-1 block w-full" :value="old('claim_available_at', now()->format('Y-m-d\TH:i'))" required />
                         <p class="mt-1 text-xs text-gray-500">{{ __('The requester will be emailed this date and time as when they, or their representative, can come claim the document.') }}</p>
                         <x-input-error class="mt-2" :messages="$errors->get('claim_available_at')" />

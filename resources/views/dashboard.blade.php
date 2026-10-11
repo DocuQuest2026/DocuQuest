@@ -109,7 +109,7 @@
                                     </p>
 
                                     <p class="text-sm text-gray-700">
-                                        {{ $recordRequest->document_type->label() }}
+                                        {{ $recordRequest->documentType->label() }}
                                         <span class="whitespace-nowrap font-semibold">&times; {{ $recordRequest->copies }}</span>
                                     </p>
 
