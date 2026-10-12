@@ -10,8 +10,8 @@ use Illuminate\View\View;
 class RecordRequestStatusController extends Controller
 {
     /**
-     * Show the reference number form, and the looked-up request's status if one was just
-     * checked (flashed from store() for a single request, same as the submission confirmation).
+     * Show the reference number form, and the status of the last request looked up in this
+     * session. It is kept in the session, not flashed, so refreshing the page keeps the status.
      */
     public function create(): View
     {
@@ -35,6 +35,8 @@ class RecordRequestStatusController extends Controller
             ]);
         }
 
-        return redirect()->route('record-requests.status.create')->with('status_reference_no', $referenceNo);
+        $request->session()->put('status_reference_no', $referenceNo);
+
+        return redirect()->route('record-requests.status.create');
     }
 }

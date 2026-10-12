@@ -7,6 +7,14 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+            @if ($user->isOfficeUser())
+            <div class="p-4 sm:p-8 bg-white shadow-sm ring-1 ring-gray-900/5 rounded-2xl">
+                <div class="max-w-xl">
+                    @include('profile.partials.update-profile-photo-form')
+                </div>
+            </div>
+            @endif
+
             <div class="p-4 sm:p-8 bg-white shadow-sm ring-1 ring-gray-900/5 rounded-2xl">
                 <div class="max-w-xl">
                     @include('profile.partials.update-profile-information-form')

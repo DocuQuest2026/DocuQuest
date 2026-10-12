@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentVerificationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProfilePhotoController;
 use App\Http\Controllers\RecordRequestCancellationController;
 use App\Http\Controllers\RecordRequestController;
 use App\Http\Controllers\RecordRequestHistoryController;
@@ -59,6 +60,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('/profile/photo', [ProfilePhotoController::class, 'show'])->name('profile.photo.show');
+    Route::post('/profile/photo', [ProfilePhotoController::class, 'update'])->name('profile.photo.update');
+    Route::delete('/profile/photo', [ProfilePhotoController::class, 'destroy'])->name('profile.photo.destroy');
 
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');

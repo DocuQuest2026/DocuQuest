@@ -6,6 +6,11 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>{{ config('app.name', 'DocuQuest') }}</title>
+        <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/logo/favicon-32.png') }}">
+        <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo/docuquest-app-icon.svg') }}">
+
+        @include('partials.theme-init')
+
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -22,9 +27,7 @@
                 <div class="pointer-events-none absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 15% 20%, white 0, transparent 35%), radial-gradient(circle at 85% 75%, white 0, transparent 30%);"></div>
 
                 <a href="/" class="relative flex items-center gap-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-700">
-                    <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 ring-1 ring-inset ring-white/25 backdrop-blur">
-                        <x-application-logo class="h-6 w-6 fill-current text-white" />
-                    </span>
+                    <x-application-logo class="h-11 w-11 shrink-0 rounded-xl shadow-md" />
                     <span class="flex flex-col leading-tight">
                         <span class="text-xl font-bold tracking-tight">{{ config('app.name', 'DocuQuest') }}</span>
                         <span class="text-[11px] font-semibold uppercase tracking-widest text-indigo-200">{{ __('Registrar workspace') }}</span>
@@ -60,11 +63,10 @@
             </div>
 
             <!-- Form panel -->
-            <div class="flex w-full flex-1 flex-col items-center justify-center px-6 py-12 sm:px-10 lg:w-1/2">
+            <div class="relative flex w-full flex-1 flex-col items-center justify-center px-6 py-12 sm:px-10 lg:w-1/2">
+                <x-theme-toggle class="absolute right-4 top-4" />
                 <a href="/" class="group mb-8 flex items-center gap-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 lg:hidden">
-                    <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-700 shadow-md shadow-indigo-600/30 ring-1 ring-inset ring-white/20">
-                        <x-application-logo class="h-6 w-6 fill-current text-white" />
-                    </span>
+                    <x-application-logo class="h-11 w-11 shrink-0 rounded-xl shadow-md" />
                     <span class="flex flex-col leading-tight">
                         <span class="text-xl font-bold tracking-tight text-gray-900">{{ config('app.name', 'DocuQuest') }}</span>
                         <span class="text-[11px] font-semibold uppercase tracking-widest text-indigo-600">{{ __('Registrar workspace') }}</span>

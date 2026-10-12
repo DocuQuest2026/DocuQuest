@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\RequestStatus;
 use App\Models\RecordRequest;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
@@ -41,10 +42,47 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
+        // Cached under the same version as the badge counts, so any request or release change
+        // retires it, and the date in the key rolls it over at midnight.
+        $today = Cache::remember(
+            'dashboard.today.'.RecordRequest::cacheVersion().'.'.now()->toDateString(),
+            300,
+            fn (): array => $this->todayFigures(),
+        );
+
         return view('dashboard', [
             'actionableRequests' => $actionableRequests,
+            'today' => $today,
             'actionableCount' => $actionableCount,
             'counts' => $counts,
         ]);
+    }
+
+    /**
+     * What happened today: requests received, documents released and urgent requests waiting.
+     *
+     * @return array{received: int, released: int, urgent: int}
+     */
+    private function todayFigures(): array
+    {
+        $figures = RecordRequest::query()
+            ->toBase()
+            ->selectRaw(
+                'count(*) filter (where created_at >= ?) as received,
+                count(*) filter (where is_urgent and status in (?, ?)) as urgent',
+                [now()->startOfDay(), RequestStatus::Pending->value, RequestStatus::Approved->value]
+            )
+            ->selectRaw(
+                '(select count(*) from document_releases join record_requests as released_requests on released_requests.id = document_releases.record_request_id where document_releases.released_at >= ? and released_requests.deleted_at is null) as released',
+                [now()->startOfDay()]
+            )
+            ->whereNull('deleted_at')
+            ->first();
+
+        return [
+            'received' => (int) $figures->received,
+            'released' => (int) $figures->released,
+            'urgent' => (int) $figures->urgent,
+        ];
     }
 }

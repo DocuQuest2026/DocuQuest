@@ -56,6 +56,19 @@ class User extends Authenticatable implements MustVerifyEmail
         ];
     }
 
+    /**
+     * Where this user's profile photo can be loaded from, or null when they have none. The
+     * version in the query string makes browsers fetch the new photo after it changes.
+     */
+    public function profilePhotoUrl(): ?string
+    {
+        if ($this->profile_photo_path === null) {
+            return null;
+        }
+
+        return route('profile.photo.show', ['v' => crc32($this->profile_photo_path)]);
+    }
+
     public function isStudent(): bool
     {
         return $this->role === Role::Student;

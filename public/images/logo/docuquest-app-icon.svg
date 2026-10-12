@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="512" height="512">
+<rect width="120" height="120" rx="28" fill="#23246B"/>
+<g transform="translate(14 12) scale(0.8)"><defs><clipPath id="cutapp" clipPathUnits="userSpaceOnUse">
+<path clip-rule="evenodd" d="M0 0 H120 V120 H0 Z M78 49 A31 31 0 1 0 78 111 A31 31 0 1 0 78 49 Z"/></clipPath></defs>
+<g clip-path="url(#cutapp)">
+<path d="M34 18 H54 A42 42 0 0 1 54 102 H18 V34 Z" fill="#FFFFFF"/>
+<path d="M18 34 H30 A4 4 0 0 0 34 30 V18 Z" fill="#A9ABEF"/>
+<rect x="30" y="46" width="30" height="5" rx="2.5" fill="#A9ABEF"/>
+<rect x="30" y="58" width="20" height="5" rx="2.5" fill="#A9ABEF"/>
+</g>
+<g fill="none" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+<path d="M79.92 58.08 A22 22 0 0 1 97.94 89.30" stroke="#6C6FD9"/>
+<path d="M96.02 92.62 A22 22 0 0 1 59.98 92.62" stroke="#A9ABEF"/>
+<path d="M58.06 89.30 A22 22 0 0 1 76.08 58.08" stroke="#FFFFFF"/>
+<polyline points="88 95 97 104 114 84" stroke="#FFB627"/>
+</g></g></svg>

@@ -1,22 +1,89 @@
 <x-app-layout>
+    <x-slot name="header">
+        <h2 class="text-2xl font-bold tracking-tight text-gray-900">
+            {{ __('Dashboard') }}
+        </h2>
+    </x-slot>
+
     @php
         $firstName = \Illuminate\Support\Str::of(Auth::user()->name)->explode(' ')->filter()->first() ?? Auth::user()->name;
     @endphp
 
-    <div class="py-8">
+    <div class="pb-8 pt-14">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             {{-- Welcome --}}
-            <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5 sm:p-8">
-                <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500">{{ now()->format('l, F j, Y') }}</p>
-                        <h1 class="mt-1 text-2xl font-bold tracking-tight text-gray-900">{{ __('Welcome back, :name', ['name' => $firstName]) }}</h1>
-                        <p class="mt-2 inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">{{ Auth::user()->role->label() }}</p>
+            <section class="relative">
+                <span class="absolute -top-7 left-6 rounded-t-lg border border-b-0 border-[#d8c389] bg-[#eadbb0] px-4 py-1.5 text-sm font-semibold text-gray-900">{{ config('app.name', 'DocuQuest') }}</span>
+
+                <div class="flex flex-col gap-5 rounded-lg border border-[#d8c389] border-b-4 bg-[#eadbb0] p-6 shadow-sm sm:p-8 md:flex-row md:items-center md:justify-between">
+                    <div class="flex items-center gap-5">
+                        <x-application-logo class="h-16 w-16 shrink-0 rounded-2xl shadow-md" />
+                        <div>
+                            <h1 class="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{{ __('Welcome back, :name', ['name' => $firstName]) }}</h1>
+                            <p class="mt-1 text-sm text-gray-800">{{ Auth::user()->role->label() }}</p>
+                        </div>
+                    </div>
+
+                    <div class="shrink-0 -rotate-3 self-start rounded-md border-2 border-red-800 px-4 py-2 text-center text-red-800 md:self-center" aria-label="{{ now()->format('l, F j, Y') }}">
+                        <p class="text-xs font-bold uppercase tracking-widest">{{ now()->format('l') }}</p>
+                        <p class="text-2xl font-extrabold leading-tight">{{ now()->format('M j') }}</p>
+                        <p class="text-xs font-bold uppercase tracking-widest">{{ now()->format('Y') }}</p>
                     </div>
                 </div>
             </section>
 
             @isset($actionableRequests)
+                {{-- Today --}}
+                @php
+                    $oldest = $actionableRequests->first();
+                @endphp
+
+                <section aria-label="{{ __('Today') }}">
+                    <dl class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                        @foreach ([
+                            ['Received today', $today['received'], 'indigo', 'M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z'],
+                            ['Released today', $today['released'], 'green', 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'],
+                            ['Urgent waiting', $today['urgent'], 'red', 'm3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z'],
+                        ] as [$label, $value, $tone, $icon])
+                            @php
+                                $accent = [
+                                    'indigo' => 'bg-indigo-50 text-indigo-600 border-indigo-500',
+                                    'green' => 'bg-green-50 text-green-600 border-green-500',
+                                    'red' => 'bg-red-50 text-red-600 border-red-500',
+                                ][$tone];
+                            @endphp
+
+                            <div class="flex items-center gap-3 rounded-xl border-l-4 bg-white px-3 py-2.5 shadow-sm ring-1 ring-gray-900/5 {{ explode(' ', $accent)[2] }}">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg {{ explode(' ', $accent)[0] }} {{ explode(' ', $accent)[1] }}">
+                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icon }}" /></svg>
+                                </span>
+                                <div class="min-w-0">
+                                    <dd class="text-xl font-bold leading-none text-gray-900">{{ $value }}</dd>
+                                    <dt class="mt-1 truncate text-xs font-medium text-gray-600">{{ __($label) }}</dt>
+                                </div>
+                            </div>
+                        @endforeach
+
+                        <div class="flex items-center gap-3 rounded-xl border-l-4 border-amber-500 bg-white px-3 py-2.5 shadow-sm ring-1 ring-gray-900/5">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                            </span>
+                            <div class="min-w-0">
+                                <dd class="truncate text-xl font-bold leading-none text-gray-900">
+                                    @if ($oldest)
+                                        {{ $oldest->created_at->diffForHumans(syntax: \Carbon\CarbonInterface::DIFF_ABSOLUTE) }}
+                                    @else
+                                        &mdash;
+                                    @endif
+                                </dd>
+                                <dt class="mt-1 truncate text-xs font-medium text-gray-600">
+                                    {{ __('Longest wait') }}@if ($oldest) <span class="font-mono">&middot; {{ $oldest->reference_no }}</span>@endif
+                                </dt>
+                            </div>
+                        </div>
+                    </dl>
+                </section>
+
                 {{-- Request counts --}}
                 <section aria-label="{{ __('Request counts') }}">
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -98,6 +165,9 @@
                                 <li class="flex flex-col gap-3 p-5 transition hover:bg-gray-50 sm:p-6 {{ $columns }}">
                                     <div class="flex flex-wrap items-center gap-3">
                                         <span class="font-mono text-sm font-semibold tracking-wide text-gray-900">{{ $recordRequest->reference_no }}</span>
+                                        @if ($recordRequest->isUrgent())
+                                            <span class="inline-flex rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800">{{ __('Urgent') }}</span>
+                                        @endif
                                         <span class="inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold lg:hidden {{ $actions[$recordRequest->status->value]['classes'] }}">
                                             {{ $actions[$recordRequest->status->value]['label'] }}
                                         </span>

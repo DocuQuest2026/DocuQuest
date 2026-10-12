@@ -91,8 +91,10 @@ test('a rejected, cancellation-requested or cancelled request shows a message an
 
 test('the lookup form is offered again after a result so another request can be checked', function () {
     lookUpStatus(RecordRequest::factory()->create())->assertSee('Check another reference number');
+});
 
-    $this->get(route('record-requests.status.create'))->assertSee('Reference number')->assertDontSee('Check another reference number');
+test('the lookup form is shown without a result when nothing has been looked up yet', function () {
+    $this->get(route('record-requests.status.create'))->assertOk()->assertSee('Reference number')->assertDontSee('Check another reference number');
 });
 
 test('the reference number field is for typing a code, not for autofill suggestions', function () {
@@ -219,3 +221,14 @@ test('the status card can not be pointed at a different request from the browser
     Livewire::test('request-status', ['referenceNo' => $recordRequest->reference_no])
         ->set('referenceNo', $other->reference_no);
 })->throws(Exception::class, 'Cannot update locked property');
+
+test('the status stays on the page when it is refreshed', function () {
+    $recordRequest = RecordRequest::factory()->create(['status' => RequestStatus::Pending]);
+
+    lookUpStatus($recordRequest);
+
+    $this->get(route('record-requests.status.create'))
+        ->assertOk()
+        ->assertSee($recordRequest->reference_no)
+        ->assertSee('Being processed');
+});

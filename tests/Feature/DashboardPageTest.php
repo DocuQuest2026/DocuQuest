@@ -134,3 +134,41 @@ test('the navigation marks the student requests page as current there', function
         ->assertOk()
         ->assertSeeHtml('aria-current="page"');
 });
+
+test('the today strip counts requests received and documents released today', function () {
+    RecordRequest::factory()->count(2)->create(['status' => RequestStatus::Pending]);
+    RecordRequest::factory()->create(['status' => RequestStatus::Pending, 'created_at' => now()->subDays(3)]);
+    $releasedToday = RecordRequest::factory()->released()->create(['created_at' => now()->subDays(2)]);
+    $releasedToday->release->update(['released_at' => now()]);
+    RecordRequest::factory()->released()->create(['created_at' => now()->subDays(2)])->release->update(['released_at' => now()->subDays(2)]);
+
+    $this->actingAs(User::factory()->staff()->create())->get(route('dashboard'))
+        ->assertOk()
+        ->assertSeeInOrder(['2', 'Received today', '1', 'Released today']);
+});
+
+test('the today strip counts urgent requests still waiting and shows the longest wait', function () {
+    RecordRequest::factory()->urgent()->create(['status' => RequestStatus::Pending, 'created_at' => now()->subDays(4)]);
+    RecordRequest::factory()->urgent()->approved()->create();
+    RecordRequest::factory()->urgent()->released()->create();
+    RecordRequest::factory()->create(['status' => RequestStatus::Pending]);
+
+    $this->actingAs(User::factory()->staff()->create())->get(route('dashboard'))
+        ->assertOk()
+        ->assertSeeInOrder(['2', 'Urgent waiting', '4 days', 'Longest wait']);
+});
+
+test('urgent requests needing action are marked urgent in the list', function () {
+    RecordRequest::factory()->urgent()->create(['status' => RequestStatus::Pending]);
+
+    $this->actingAs(User::factory()->staff()->create())->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('Urgent', false);
+});
+
+test('the today strip shows no longest wait when nothing is waiting', function () {
+    $this->actingAs(User::factory()->staff()->create())->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('Longest wait')
+        ->assertDontSee('Longest wait 0');
+});

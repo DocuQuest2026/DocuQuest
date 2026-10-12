@@ -56,9 +56,10 @@ test('the dashboard keeps its detail text readable: no faint gray and no tiny ty
         ->and($main)->not->toContain('text-[11px]');
 });
 
-test('the full navigation appears from tablet width, with a menu button on phones', function () {
+test('the sidebar navigation shows from desktop width, with a menu button on smaller screens', function () {
     $this->actingAs(User::factory()->staff()->create())->get(route('dashboard'))
         ->assertOk()
-        ->assertSeeHtml('hidden border-t border-gray-100 md:block')
+        ->assertSeeHtml('lg:translate-x-0')
+        ->assertSeeHtml('Student Requests')
         ->assertSeeHtml('aria-label="Menu"');
 });
